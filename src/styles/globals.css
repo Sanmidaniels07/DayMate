@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-charcoal: var(--charcoal);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-celebrate: var(--celebrate);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+  --radius-card: var(--radius-card);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The signature card — hairline + soft float, used everywhere */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}

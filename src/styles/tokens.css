@@ -1,0 +1,65 @@
+:root {
+  /* ---- Surfaces ---- */
+  --canvas: #b9c4cc;
+  --surface: #f7f6f2;
+  --surface-raised: #ffffff;
+  --charcoal: #2e3a3e;
+  --charcoal-soft: #3a474c;
+
+  /* ---- Ink ---- */
+  --ink: #232b2e;
+  --ink-soft: #5b6a70;
+  --ink-faint: #8b979c;
+  --ink-on-dark: #f7f6f2;
+
+  /* ---- The two-accent system ---- */
+  --accent: #4e6e7e;          /* functional: CTAs, selection, links */
+  --accent-hover: #43616f;
+  --accent-soft: #4e6e7e1a;
+  --celebrate: #e8a33d;       /* emotional: birthdays, countdowns, gold moments */
+  --celebrate-soft: #e8a33d24;
+
+  /* ---- Blob tints, promoted to full voice ---- */
+  --blob-butter: #f2e8b3;
+  --blob-blush: #f4cdd4;
+  --blob-powder: #bcd7e8;
+  --blob-lavender: #ddd0f0;
+  --blob-sage: #cbe0c3;
+  --blob-peach: #f6d7bd;
+
+  --success: #5a8a6e;
+  --danger: #b3564f;
+
+  --hairline: rgb(0 0 0 / 0.06);
+  --shadow-card: 0 1px 2px rgb(35 43 46 / 0.04), 0 8px 24px rgb(35 43 46 / 0.06);
+  --shadow-float: 0 2px 8px rgb(35 43 46 / 0.08), 0 16px 40px rgb(35 43 46 / 0.12);
+  --radius-card: 1.25rem;
+  --radius-pill: 999px;
+
+  --text-display: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
+  --text-title: clamp(1.375rem, 1.1rem + 1.2vw, 1.75rem);
+  --text-body: 0.9375rem;
+  --text-small: 0.8125rem;
+  --text-micro: 0.6875rem;
+}
+
+/* ---- Bake-off alternates (dev-only switcher toggles these) ---- */
+[data-theme='golden'] {
+  --canvas: #f2ebe0;
+  --surface: #fdfaf4;
+  --accent: #b0653a;
+  --accent-hover: #9c5730;
+  --celebrate: #d9a441;
+  --charcoal: #3a3129;
+}
+[data-theme='night'] {
+  --canvas: #1e2430;
+  --surface: #2a3140;
+  --surface-raised: #333b4d;
+  --ink: #eef1f6;
+  --ink-soft: #a8b2c2;
+  --ink-faint: #6d7789;
+  --hairline: rgb(255 255 255 / 0.08);
+  --accent: #7da3b5;
+  --celebrate: #e8a33d;
+}
