@@ -7,17 +7,18 @@ export function useUsernameAvailable(username: string) {
     queryKey: ['username-available', username],
     queryFn: () =>
       api<{ data: { available: boolean } }>(
-        `/profiles/username-available?username=${encodeURIComponent(username)}`,
+        `/profiles/username-available?u=${encodeURIComponent(username)}`,  
       ),
     enabled: username.length >= 3,
     staleTime: 60_000,
   });
 }
 
+
 export function useSetupProfile() {
   return useMutation({
     mutationFn: (body: { username: string; displayName: string; bio?: string; city?: string; country?: string }) =>
-      api<{ data: unknown }>('/profiles', { method: 'POST', body: JSON.stringify(body) }),
+      api<{ data: unknown }>('/profiles/setup', { method: 'POST', body: JSON.stringify(body) }),
   });
 }
 

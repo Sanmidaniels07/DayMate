@@ -76,3 +76,55 @@ export function useToggleReaction() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['feed', 'home'] }),
   });
 }
+
+export function usePost(postId: string) {
+  return useQuery({
+    queryKey: ['post', postId],
+    queryFn: () => api<{ data: PostCard }>(`/feed/posts/${postId}`),
+    enabled: !!postId,
+  });
+}
+
+export function useAuthorFeed(username: string) {
+  return useInfiniteQuery({
+    queryKey: ['feed', 'by', username],
+    queryFn: ({ pageParam }) =>
+      api<{ data: PostCard[]; meta: { cursor: string | null; hasMore: boolean } }>(
+        `/feed/by/${username}?limit=15${pageParam ? `&cursor=${pageParam}` : ''}`,
+      ),
+    initialPageParam: '' as string,
+    getNextPageParam: (last) => (last.meta.hasMore ? last.meta.cursor : undefined),
+    enabled: !!username,
+  });
+}
+
+export function useDeletePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => api(`/feed/posts/${postId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed', 'home'] }),
+  });
+}
+
+export function usePostMedia() {
+  return async (file: File): Promise<{ publicId: string; type: 'image' } | null> => {
+    try {
+      const { data: sig } = await api<{ data: {
+        signature: string; timestamp: number; apiKey: string; folder: string;
+        public_id: string; transformation?: string; uploadUrl: string;
+      } }>('/feed/posts/media/sign', { method: 'POST' });
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('api_key', sig.apiKey);
+      fd.append('timestamp', String(sig.timestamp));
+      fd.append('signature', sig.signature);
+      fd.append('folder', sig.folder);
+      fd.append('public_id', sig.public_id);
+      if (sig.transformation) fd.append('transformation', sig.transformation);
+      const res = await fetch(sig.uploadUrl, { method: 'POST', body: fd });
+      if (!res.ok) return null;
+      const cloud = await res.json();
+      return { publicId: cloud.public_id, type: 'image' };
+    } catch { return null; }
+  };
+}

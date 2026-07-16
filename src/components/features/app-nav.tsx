@@ -1,16 +1,20 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, MessageCircle, Bell, User } from 'lucide-react';
+import { Home, Compass, MessageCircle, Bell, User, Users, Settings } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/use-notifications';
 import { useNotificationSocket } from '@/hooks/use-notification-socket';
+import { useUnreadChats } from '@/hooks/use-chat';
+import { usePresenceSocket } from '@/hooks/use-presence';
 
 const ITEMS = [
   { href: '/home', label: 'Home', icon: Home },
   { href: '/discover', label: 'Discover', icon: Compass },
+  { href: '/communities', label: 'Communities', icon: Users },
   { href: '/chat', label: 'Chat', icon: MessageCircle },
   { href: '/notifications', label: 'Alerts', icon: Bell },
   { href: '/me', label: 'Profile', icon: User },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
 export function AppNav() {
@@ -18,8 +22,13 @@ export function AppNav() {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   useNotificationSocket();
+  
+  usePresenceSocket();
+
   const unread = useUnreadCount();
   const alertCount = unread.data?.data.count ?? 0;
+  const chatUnread = useUnreadChats();
+  const chatCount = chatUnread.data?.data.total ?? 0;
 
   return (
     <nav
@@ -65,6 +74,11 @@ export function AppNav() {
                 {href === '/notifications' && alertCount > 0 && (
                   <span className="absolute -right-1.5 -top-1.5 grid min-w-4 place-items-center rounded-full bg-celebrate px-1 text-[9px] font-bold text-[#3a2c10]">
                     {alertCount > 9 ? '9+' : alertCount}
+                  </span>
+                )}
+                {href === '/chat' && chatCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[9px] font-bold text-[var(--ink-on-dark)]">
+                    {chatCount > 9 ? '9+' : chatCount}
                   </span>
                 )}
               </div>

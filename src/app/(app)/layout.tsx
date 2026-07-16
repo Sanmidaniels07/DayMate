@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <AppNav />
         <CallManager />
         {/* Bottom padding clears the mobile nav; desktop clears the rail via pl */}
-        <div className="mx-auto max-w-2xl px-4 pb-28 pt-6 lg:pb-10">{children}</div>
+        <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 lg:px-8 lg:pb-10">{children}</div>
       </div>
     </AuthGuard>
   );

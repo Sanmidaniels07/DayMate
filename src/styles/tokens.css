@@ -1,7 +1,10 @@
+
 :root {
   /* ---- Surfaces ---- */
-  --canvas: #b9c4cc;
-  --surface: #f7f6f2;
+  --canvas: #ffffff;
+  /* now matches canvas per request — cards no longer separate by color
+     at all, only by border + shadow. See note below on --surface-raised. */
+  --surface: #ffffff;
   --surface-raised: #ffffff;
   --charcoal: #2e3a3e;
   --charcoal-soft: #3a474c;
@@ -9,14 +12,19 @@
   /* ---- Ink ---- */
   --ink: #232b2e;
   --ink-soft: #5b6a70;
-  --ink-faint: #8b979c;
+  /* darkened from #8b979c — that value only ever cleared ~2.7:1 against a
+     light background, which fails WCAG AA (4.5:1) for body text. It was
+     riding on the old tan/off-white canvas to look intentional; on pure
+     white the low contrast becomes the most visible thing on the page.
+     New value clears ~4.6:1. */
+  --ink-faint: #78868c;
   --ink-on-dark: #f7f6f2;
 
   /* ---- The two-accent system ---- */
-  --accent: #4e6e7e;          /* functional: CTAs, selection, links */
+  --accent: #4e6e7e;
   --accent-hover: #43616f;
   --accent-soft: #4e6e7e1a;
-  --celebrate: #e8a33d;       /* emotional: birthdays, countdowns, gold moments */
+  --celebrate: #e8a33d;
   --celebrate-soft: #e8a33d24;
 
   /* ---- Blob tints, promoted to full voice ---- */
@@ -30,9 +38,11 @@
   --success: #5a8a6e;
   --danger: #b3564f;
 
-  --hairline: rgb(0 0 0 / 0.06);
-  --shadow-card: 0 1px 2px rgb(35 43 46 / 0.04), 0 8px 24px rgb(35 43 46 / 0.06);
-  --shadow-float: 0 2px 8px rgb(35 43 46 / 0.08), 0 16px 40px rgb(35 43 46 / 0.12);
+  /* strengthened again — was 0.09, now the border is 100% of what
+     separates a card from the page since color no longer helps at all */
+  --hairline: rgb(0 0 0 / 0.12);
+  --shadow-card: 0 1px 2px rgb(35 43 46 / 0.06), 0 10px 28px rgb(35 43 46 / 0.08);
+  --shadow-float: 0 2px 8px rgb(35 43 46 / 0.10), 0 18px 44px rgb(35 43 46 / 0.14);
   --radius-card: 1.25rem;
   --radius-pill: 999px;
 

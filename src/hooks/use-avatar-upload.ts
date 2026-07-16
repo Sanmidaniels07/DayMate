@@ -28,6 +28,7 @@ export function useAvatarUpload() {
       fd.append('signature', sig.signature);
       fd.append('folder', sig.folder);
       fd.append('public_id', sig.public_id);
+      fd.append('overwrite', 'true'); 
       if (sig.transformation) fd.append('transformation', sig.transformation);
 
       const cloudRes = await fetch(sig.uploadUrl, { method: 'POST', body: fd });

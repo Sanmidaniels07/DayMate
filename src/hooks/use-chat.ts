@@ -88,3 +88,11 @@ export function useConversationDetail(conversationId: string) {
     enabled: !!conversationId,
   });
 }
+
+export function useUnreadChats() {
+  return useQuery({
+    queryKey: ['chat', 'unread'],
+    queryFn: () => api<{ data: { total: number; byConversation: Record<string, number> } }>('/chat/unread'),
+    refetchInterval: 60_000,
+  });
+}

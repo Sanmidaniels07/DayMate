@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiError, api } from '@/lib/api';
 import { useSessionStore } from '@/stores/session';
+import { connectSocket } from '@/lib/socket';
+
+interface SessionBootUser {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -11,9 +19,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30_000, // sockets keep truth fresh; polling is the fallback, not the plan
+            staleTime: 30_000,
             retry: (failureCount, error) => {
-              // Never retry 4xx — a 404 is an answer, not a flake.
               if (error instanceof ApiError && error.status < 500) return false;
               return failureCount < 2;
             },
@@ -25,23 +32,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { status } = useSessionStore.getState();
     if (status !== 'unknown') return;
-    api<{ data: { accessToken: string; user: never } }>('/auth/refresh', {
+    api<{ data: { accessToken: string; user: SessionBootUser } }>('/auth/refresh', {
       method: 'POST',
       skipAuth: true,
     })
       .then((json) => {
-        const { accessToken, user } = json.data as { accessToken: string; user: SessionBootUser };
+        const { accessToken, user } = json.data;
         useSessionStore.getState().setSession(accessToken, user);
+        connectSocket(); // ← revive the real-time socket for reload-restored sessions
       })
       .catch(() => useSessionStore.getState().setGuest());
   }, []);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
-}
-
-interface SessionBootUser {
-  id: string;
-  fullName: string;
-  email: string;
-  role: string;
 }
