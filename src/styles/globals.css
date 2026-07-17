@@ -27,7 +27,7 @@ body {
 }
 
 .card {
-  background: var(--surface);
+  background-color: white;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
