@@ -1,6 +1,8 @@
 'use client';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import type { FriendRow } from './use-social'; 
+
 
 export interface ConversationParticipant {
   userId: string;
@@ -94,5 +96,63 @@ export function useUnreadChats() {
     queryKey: ['chat', 'unread'],
     queryFn: () => api<{ data: { total: number; byConversation: Record<string, number> } }>('/chat/unread'),
     refetchInterval: 60_000,
+  });
+}
+
+
+export function useCreateGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { title: string; usernames: string[] }) =>
+      api<{ data: Conversation }>('/chat/conversations/group', {
+        method: 'POST', body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
+
+export function useAddGroupMember(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      api(`/chat/conversations/${conversationId}/members`, {
+        method: 'POST', body: JSON.stringify({ username }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversation', conversationId] }),
+  });
+}
+
+export function useRemoveGroupMember(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      api(`/chat/conversations/${conversationId}/members/${username}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversation', conversationId] }),
+  });
+}
+
+export function useLeaveGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (conversationId: string) =>
+      api(`/chat/conversations/${conversationId}/leave`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
+export function useDeleteMessage(conversationId: string) {
+  return useMutation({
+    mutationFn: (messageId: string) =>
+      api(`/chat/conversations/${conversationId}/messages/${messageId}`, { method: 'DELETE' }),
+  });
+}
+
+export function useEditMessage(conversationId: string) {
+  return useMutation({
+    mutationFn: ({ messageId, body }: { messageId: string; body: string }) =>
+      api(`/chat/conversations/${conversationId}/messages/${messageId}`, {
+        method: 'PATCH', body: JSON.stringify({ body }),
+      }),
   });
 }

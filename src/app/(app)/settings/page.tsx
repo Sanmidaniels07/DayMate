@@ -1,12 +1,13 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, User, Shield, Bell, Ban, LogOut } from 'lucide-react';
+import { ChevronRight, User, Shield, Bell, Ban, LogOut, Flag } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSessionStore } from '@/stores/session';
 import { disconnectSocket } from '@/lib/socket';
 import { useMyProfile } from '@/hooks/use-settings';
 import { BlobAvatar } from '@/components/ui/blob-avatar';
+import { label } from 'framer-motion/client';
 
 const GROUPS = [
   {
@@ -24,6 +25,14 @@ const GROUPS = [
     label: 'Preferences',
     links: [{ href: '/settings/notifications', label: 'Notifications', icon: Bell }],
   },
+  
+  {
+    label: 'My Reports',
+    
+    links: [{href: '/settings/reports', label: 'My reports', icon: Flag }],
+
+  }
+
 ];
 
 export default function SettingsPage() {

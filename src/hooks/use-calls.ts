@@ -32,3 +32,15 @@ export function useDeclineCall() {
 export function useEndCall() {
   return useMutation({ mutationFn: (callId: string) => api(`/calls/${callId}/end`, { method: 'POST' }) });
 }
+
+export function useCallHistory(conversationId: string, enabled = false) {
+  return useQuery({
+    queryKey: ['call-history', conversationId],
+    queryFn: () => api<{ data: {
+      id: string; type: 'VOICE' | 'VIDEO'; status: string; startedAt: string;
+      endedAt: string | null; durationSec: number | null;
+      initiator: { profile: { username: string; displayName: string } | null };
+    }[] }>(`/calls/history?conversationId=${conversationId}`),
+    enabled: enabled && !!conversationId,
+  });
+}

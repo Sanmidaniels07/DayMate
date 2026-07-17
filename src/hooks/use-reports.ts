@@ -1,6 +1,7 @@
 'use client';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery  } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+
 
 export type ReportTargetType = 'USER' | 'POST' | 'MESSAGE' | 'COMMENT';
 
@@ -24,5 +25,21 @@ export function useReport() {
     }) => api<{ data: { reportId: string; duplicate: boolean } }>('/reports', {
       method: 'POST', body: JSON.stringify(input),
     }),
+  });
+}
+
+
+export interface MyReport {
+  id: string;
+  targetType: 'USER' | 'POST' | 'MESSAGE' | 'COMMENT';
+  reason: string;
+  status: 'PENDING' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED';
+  createdAt: string;
+}
+
+export function useMyReports() {
+  return useQuery({
+    queryKey: ['reports', 'mine'],
+    queryFn: () => api<{ data: MyReport[] }>('/reports/mine'),
   });
 }

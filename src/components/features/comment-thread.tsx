@@ -1,11 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Flag } from 'lucide-react';
 import { BlobAvatar } from '@/components/ui/blob-avatar';
 import { Button } from '@/components/ui/button';
 import { timeAgo } from '@/lib/time';
 import { useSessionStore } from '@/stores/session';
 import { useComments, useAddComment, useDeleteComment, type Comment } from '@/hooks/use-comments';
+import { ReportModal } from '@/components/features/report-modal';
 
 export function CommentThread({ postId }: { postId: string }) {
   const comments = useComments(postId);
@@ -76,6 +77,7 @@ function CommentItem({
 }: { comment: Comment; postId: string; onReply: (name: string) => void }) {
   const meId = useSessionStore((s) => s.user?.id);
   const del = useDeleteComment(postId);
+  const [reporting, setReporting] = useState(false);
   const p = comment.author.profile;
   if (!p) return null;
 
@@ -92,6 +94,9 @@ function CommentItem({
           <button onClick={() => onReply(p.displayName)} className="font-medium">Reply</button>
           <button onClick={() => del.mutate(comment.id)} className="flex items-center gap-1 hover:text-danger">
             <Trash2 size={13} />
+          </button>
+          <button onClick={() => setReporting(true)} className="hover:text-danger" aria-label="Report comment">
+            <Flag size={12} />
           </button>
         </div>
 
@@ -120,6 +125,11 @@ function CommentItem({
               );
             })}
           </div>
+        )}
+
+        {reporting && (
+          <ReportModal targetType="COMMENT" targetId={comment.id} targetLabel="this comment"
+            onClose={() => setReporting(false)} />
         )}
       </div>
     </div>

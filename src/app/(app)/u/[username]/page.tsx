@@ -2,6 +2,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PresenceAvatar } from "@/components/ui/presence-avatar";
 import { getBlobTintVar } from "@/components/ui/blob-avatar";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,18 @@ import { useAuthorFeed } from "@/hooks/use-feed";
 import { PostCard } from "@/components/features/post-card";
 import { MONTHS } from "@/lib/months";
 import { timeAgo } from "@/lib/time";
+import { api } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
 import { Cake, MapPin, MoreHorizontal } from "lucide-react";
+
+
+function useBlock(username: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api(`/social/block/${username}`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
+  });
+}
 
 export default function ProfilePage({
   params,
@@ -33,6 +45,8 @@ export default function ProfilePage({
   const timeline = useAuthorFeed(username);
   const posts = timeline.data?.pages.flatMap((pg) => pg.data) ?? [];
   const [reporting, setReporting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const block = useBlock(username);
 
   if (isLoading) return <ProfileSkeleton />;
 
@@ -96,13 +110,38 @@ export default function ProfilePage({
                   {p.relationship?.isFollowing ? "Following" : "Follow"}
                 </button>
                 <RelationshipButton profile={p} />
-                <button
-                  onClick={() => setReporting(true)}
-                  aria-label={`More options for @${p.username}`}
-                  className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-black/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-                >
-                  <MoreHorizontal size={20} />
-                </button>
+
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuOpen((v) => !v)}
+                    aria-label={`More options for @${p.username}`}
+                    className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-black/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+                  >
+                    <MoreHorizontal size={20} />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 top-11 z-20 w-44 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] shadow-[var(--shadow-float)]">
+                        <button
+                          onClick={() => { setMenuOpen(false); setReporting(true); }}
+                          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] hover:bg-black/[0.03]"
+                        >
+                          Report @{p.username}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            block.mutate(undefined, { onSuccess: () => toast.success(`Blocked @${p.username}`) });
+                          }}
+                          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] text-danger hover:bg-[var(--danger)]/5"
+                        >
+                          Block @{p.username}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>

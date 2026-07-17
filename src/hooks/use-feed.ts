@@ -128,3 +128,13 @@ export function usePostMedia() {
     } catch { return null; }
   };
 }
+
+export function usePostReactions(postId: string, enabled = false) {
+  return useQuery({
+    queryKey: ['reactions', postId],
+    queryFn: () => api<{ data: { emoji: string; count: number; reactedByMe: boolean }[] }>(
+      `/feed/posts/${postId}/reactions`,
+    ),
+    enabled: enabled && !!postId,
+  });
+}

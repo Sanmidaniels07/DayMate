@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import {
   useConversations,
   useUnreadChats,
@@ -15,6 +15,7 @@ import { BlobAvatar } from "@/components/ui/blob-avatar";
 import { timeAgo } from "@/lib/time";
 import { fadeUp, stagger } from "@/components/ui/motion";
 import { Modal } from "@/components/ui/modal";
+import { CreateGroupModal } from "@/components/features/create-group-modal";
 import { ChatThread } from "./chat-thread";
 
 function ChatListInner() {
@@ -28,12 +29,12 @@ function ChatListInner() {
   const convos = data?.data ?? [];
 
   const [activeThread, setActiveThread] = useState<string | null>(null);
-
+  const [creatingGroup, setCreatingGroup] = useState(false);
 
   const handleClose = () => {
-  console.log("Closing modal");
-  setActiveThread(null);
-};
+    console.log("Closing modal");
+    setActiveThread(null);
+  };
 
   useEffect(() => {
     if (!withUser) return;
@@ -55,14 +56,20 @@ function ChatListInner() {
 
   return (
     <>
-     <Modal open={!!activeThread} onClose={handleClose}>
-  {activeThread && (
-    <ChatThread
-      conversationId={activeThread}
-      onClose={handleClose}
-    />
-  )}
-</Modal>
+      <Modal open={!!activeThread} onClose={handleClose}>
+        {activeThread && (
+          <ChatThread
+            conversationId={activeThread}
+            onClose={handleClose}
+          />
+        )}
+      </Modal>
+
+      <CreateGroupModal
+        open={creatingGroup}
+        onClose={() => setCreatingGroup(false)}
+        onCreated={(id) => { setCreatingGroup(false); setActiveThread(id); }}
+      />
 
       <motion.div
         variants={stagger}
@@ -70,13 +77,22 @@ function ChatListInner() {
         animate="show"
         className="flex flex-col gap-5"
       >
-        <motion.header variants={fadeUp}>
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
-            Your conversations
-          </p>
-          <h1 className="mt-1 font-display text-[length:var(--text-title)] font-semibold tracking-[-0.01em]">
-            Messages
-          </h1>
+        <motion.header variants={fadeUp} className="flex items-end justify-between">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
+              Your conversations
+            </p>
+            <h1 className="mt-1 font-display text-[length:var(--text-title)] font-semibold tracking-[-0.01em]">
+              Messages
+            </h1>
+          </div>
+          <button
+            onClick={() => setCreatingGroup(true)}
+            className="grid size-11 place-items-center rounded-full bg-accent text-[var(--ink-on-dark)] shadow-sm transition-transform active:scale-95"
+            aria-label="New group"
+          >
+            <Plus size={22} />
+          </button>
         </motion.header>
 
         {isLoading ? (
@@ -98,12 +114,20 @@ function ChatListInner() {
               Head to a friend&apos;s profile and tap Message to start your
               first chat.
             </p>
-            <Link
-              href="/discover"
-              className="mt-1 rounded-[var(--radius-pill)] bg-accent px-5 py-2.5 text-[14px] font-semibold text-[var(--ink-on-dark)]"
-            >
-              Find people
-            </Link>
+            <div className="mt-1 flex items-center gap-3">
+              <Link
+                href="/discover"
+                className="rounded-[var(--radius-pill)] bg-accent px-5 py-2.5 text-[14px] font-semibold text-[var(--ink-on-dark)]"
+              >
+                Find people
+              </Link>
+              <button
+                onClick={() => setCreatingGroup(true)}
+                className="text-[13px] font-medium text-accent"
+              >
+                or start a group
+              </button>
+            </div>
           </motion.div>
         ) : (
           <motion.div

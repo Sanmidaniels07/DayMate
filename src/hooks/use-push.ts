@@ -37,3 +37,23 @@ export async function enablePush(): Promise<'granted' | 'denied' | 'unsupported'
   });
   return 'granted';
 }
+
+
+export async function disablePush(): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) return false;
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = await reg?.pushManager.getSubscription();
+  if (!sub) return true;
+  await api('/notifications/push/unsubscribe', {
+    method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }),
+  });
+  await sub.unsubscribe();
+  return true;
+}
+
+export async function isPushEnabled(): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) return false;
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = await reg?.pushManager.getSubscription();
+  return !!sub;
+}
