@@ -55,6 +55,7 @@ export function useMessages(conversationId: string) {
   });
 }
 
+// use-chat.ts — updated useSendMessage
 export function useSendMessage(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -62,7 +63,21 @@ export function useSendMessage(conversationId: string) {
       api<{ data: Message }>(`/chat/conversations/${conversationId}/messages`, {
         method: 'POST', body: JSON.stringify({ body }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+    onSuccess: (res) => {
+      const message = res.data;
+      qc.setQueryData(
+        ['messages', conversationId],
+        (old: { pages: { data: Message[]; meta: any }[]; pageParams: unknown[] } | undefined) => {
+          if (!old) return old;
+          const [firstPage, ...rest] = old.pages;
+          return {
+            ...old,
+            pages: [{ ...firstPage, data: [message, ...firstPage.data] }, ...rest],
+          };
+        },
+      );
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
   });
 }
 

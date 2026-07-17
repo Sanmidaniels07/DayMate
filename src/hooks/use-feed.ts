@@ -43,37 +43,56 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: (body: { body?: string; media?: unknown[]; isBirthdayPost?: boolean }) =>
       api<{ data: PostCard }>('/feed/posts', { method: 'POST', body: JSON.stringify(body) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed', 'home'] }),
+    onSuccess: (res) => {
+      const newPost = res.data;
+      qc.setQueryData(
+        ['feed', 'home'],
+        (old: { pages: FeedPage[]; pageParams: unknown[] } | undefined) => {
+          if (!old) return old;
+          const [firstPage, ...rest] = old.pages;
+          return { ...old, pages: [{ ...firstPage, data: [newPost, ...firstPage.data] }, ...rest] };
+        },
+      );
+    },
   });
 }
 
 export function useToggleReaction() {
   const qc = useQueryClient();
+  const applyDelta = (postId: string, delta: number) => {
+    qc.setQueryData(['feed', 'home'], (old: { pages: FeedPage[] } | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((pg) => ({
+          ...pg,
+          data: pg.data.map((p) =>
+            p.id === postId
+              ? { ...p, _count: { ...p._count, reactions: Math.max(0, p._count.reactions + delta) } }
+              : p,
+          ),
+        })),
+      };
+    });
+  };
+
   return useMutation({
     mutationFn: ({ postId, emoji }: { postId: string; emoji: string }) =>
       api<{ data: { emoji: string; reacted: boolean } }>(`/feed/posts/${postId}/reactions`, {
         method: 'POST', body: JSON.stringify({ emoji }),
       }),
-    // Optimistic: bump the count instantly, roll back on failure.
+    
     onMutate: async ({ postId }) => {
       await qc.cancelQueries({ queryKey: ['feed', 'home'] });
       const prev = qc.getQueryData(['feed', 'home']);
-      qc.setQueryData(['feed', 'home'], (old: { pages: FeedPage[] } | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((pg) => ({
-            ...pg,
-            data: pg.data.map((p) =>
-              p.id === postId ? { ...p, _count: { ...p._count, reactions: p._count.reactions + 1 } } : p,
-            ),
-          })),
-        };
-      });
+      applyDelta(postId, +1);
       return { prev };
     },
+    onSuccess: (res, { postId }) => {
+      
+      if (!res.data.reacted) applyDelta(postId, -2);
+    },
     onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(['feed', 'home'], ctx.prev),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['feed', 'home'] }),
   });
 }
 
