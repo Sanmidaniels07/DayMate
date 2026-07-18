@@ -12,18 +12,33 @@ export function CallOverlay({ iceServers }: { iceServers: RTCIceServer[] }) {
   const decline = useDeclineCall();
   const end = useEndCall();
   const remoteVideo = useRef<HTMLVideoElement>(null);
+  const remoteAudio = useRef<HTMLAudioElement>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
 
   const peer = call?.initiator.profile;
   const isVideo = call?.type === 'VIDEO';
 
-  // Caller: build the session and offer as soon as the callee answers (phase → connecting)
+  // Attach the remote stream to whichever element exists, whenever it's ready.
+  const attachRemote = (stream: MediaStream) => {
+    remoteStreamRef.current = stream;
+    if (remoteVideo.current) remoteVideo.current.srcObject = stream;
+    if (remoteAudio.current) remoteAudio.current.srcObject = stream;
+  };
+
+  // Re-attach if the element mounts after the stream arrived (covers the timing race).
+  useEffect(() => {
+    if (remoteStreamRef.current) {
+      if (remoteVideo.current) remoteVideo.current.srcObject = remoteStreamRef.current;
+      if (remoteAudio.current) remoteAudio.current.srcObject = remoteStreamRef.current;
+    }
+  }, [phase, isVideo]);
+
   useEffect(() => {
     if (!call || !isCaller || phase !== 'connecting' || session) return;
     (async () => {
-      const s = new CallSession(call.id, iceServers,
-        (stream) => { if (remoteVideo.current) remoteVideo.current.srcObject = stream; },
+      const s = new CallSession(call.id, iceServers, attachRemote,
         (state) => { if (state === 'connected') set({ phase: 'active' }); });
       await s.startLocalMedia(isVideo);
       set({ session: s });
@@ -34,11 +49,10 @@ export function CallOverlay({ iceServers }: { iceServers: RTCIceServer[] }) {
   const acceptCall = async () => {
     if (!call) return;
     await answer.mutateAsync(call.id);
-    const s = new CallSession(call.id, iceServers,
-      (stream) => { if (remoteVideo.current) remoteVideo.current.srcObject = stream; },
+    const s = new CallSession(call.id, iceServers, attachRemote,
       (state) => { if (state === 'connected') set({ phase: 'active' }); });
     await s.startLocalMedia(isVideo);
-    set({ session: s, phase: 'connecting' }); // the caller's offer arrives via CALL_SIGNAL → handleSignal answers
+    set({ session: s, phase: 'connecting' });
   };
 
   const hangUp = async () => {
@@ -53,9 +67,13 @@ export function CallOverlay({ iceServers }: { iceServers: RTCIceServer[] }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-between bg-charcoal p-8 text-white">
-      {isVideo && phase === 'active' && (
-        <video ref={remoteVideo} autoPlay playsInline className="absolute inset-0 size-full object-cover" />
+      {/* Remote VIDEO — always mounted for video calls (not gated on phase) */}
+      {isVideo && (
+        <video ref={remoteVideo} autoPlay playsInline
+          className={`absolute inset-0 size-full object-cover ${phase === 'active' ? '' : 'hidden'}`} />
       )}
+      {/* Remote AUDIO sink — always mounted for voice calls (this was missing) */}
+      {!isVideo && <audio ref={remoteAudio} autoPlay className="hidden" />}
 
       <div className="z-10 mt-16 flex flex-col items-center gap-4">
         {(!isVideo || phase !== 'active') && (
