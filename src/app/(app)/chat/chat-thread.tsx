@@ -23,6 +23,8 @@ import { PresenceAvatar } from "@/components/ui/presence-avatar";
 import { TypingDots } from "@/components/features/typing-dots";
 import { GroupInfoModal } from "@/components/features/group-info-modal";
 import { CallHistoryModal } from "@/components/features/call-history-modal";
+import { ApiError } from '@/lib/api';
+import { toast } from '@/components/ui/toast';
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
@@ -82,7 +84,7 @@ export function ChatThread({
     send.mutate(body);
   };
 
-  const startCall = (type: "VOICE" | "VIDEO") => {
+ const startCall = (type: "VOICE" | "VIDEO") => {
     initiate.mutate(
       {
         conversationId,
@@ -95,6 +97,13 @@ export function ChatThread({
             call: data.call,
             isCaller: true,
           }),
+        onError: (err) => {
+          const msg =
+            err instanceof ApiError && err.status === 409
+              ? err.message 
+              : "Could not start the call. Please try again.";
+          toast.error(msg);
+        },
       },
     );
   };

@@ -19,13 +19,17 @@ let refreshPromise: Promise<boolean> | null = null;
 async function refreshSession(): Promise<boolean> {
   refreshPromise ??= (async () => {
     try {
+      const storedRefresh = useSessionStore.getState().refreshToken;
       const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: 'POST',
-        credentials: 'include', // the httpOnly cookie rides along
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(storedRefresh ? { refreshToken: storedRefresh } : {}),
       });
       if (!res.ok) return false;
       const json = await res.json();
-      useSessionStore.getState().setSession(json.data.accessToken, json.data.user);
+      // capture the rotated refresh token for the next refresh
+      useSessionStore.getState().setSession(json.data.accessToken, json.data.user, json.data.refreshToken);
       return true;
     } catch {
       return false;
