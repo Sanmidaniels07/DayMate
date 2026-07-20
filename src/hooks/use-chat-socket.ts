@@ -2,14 +2,8 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSocket, SocketEvents } from '@/lib/socket';
-import type { Message } from './use-chat';
+import { mergeMessage, type Message } from './use-chat';
 
-/**
- * Bridges socket message events into the React Query cache. Mounted once
- * per open thread. The backend fans out message:new to everyone in the
- * room INCLUDING the sender — so this is the single insertion point for
- * new messages, sender and receiver alike (no optimistic double-render).
- */
 export function useChatSocket(conversationId: string) {
   const qc = useQueryClient();
 
@@ -19,18 +13,10 @@ export function useChatSocket(conversationId: string) {
 
     const onNew = ({ message }: { message: Message }) => {
       if (message.conversationId !== conversationId) {
-        // A message in ANOTHER conversation — just bump the list.
         qc.invalidateQueries({ queryKey: ['conversations'] });
         return;
       }
-      qc.setQueryData(['messages', conversationId], (old: { pages: { data: Message[] }[]; pageParams: unknown[] } | undefined) => {
-        if (!old) return old;
-        // Newest page is pages[0]; messages are newest-first, so prepend.
-        if (old.pages[0]?.data.some((m) => m.id === message.id)) return old; // dedupe
-        const pages = [...old.pages];
-        pages[0] = { ...pages[0], data: [message, ...pages[0].data] };
-        return { ...old, pages };
-      });
+      mergeMessage(qc, conversationId, message);
       qc.invalidateQueries({ queryKey: ['conversations'] });
     };
 

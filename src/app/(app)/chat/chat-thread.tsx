@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Clock, ImagePlus, Mic, MoreVertical, Paperclip, Pencil, Phone, Send, Trash2, Users, Video, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, ImagePlus, Mic, MoreVertical, Paperclip, Pencil, Phone, RotateCw, Send, Trash2, Users, Video, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useMessages,
   useSendMessage,
@@ -9,6 +10,7 @@ import {
   useConversationDetail,
   useDeleteMessage,
   useEditMessage,
+  removeMessage,
   type Message,
 } from "@/hooks/use-chat";
 import { useChatSocket } from "@/hooks/use-chat-socket";
@@ -36,6 +38,7 @@ export function ChatThread({
   onClose: () => void;
 }) {
   const meId = useSessionStore((s) => s.user?.id);
+  const qc = useQueryClient();
 
   const messages = useMessages(conversationId);
   const send = useSendMessage(conversationId);
@@ -84,7 +87,13 @@ export function ChatThread({
     send.mutate(body);
   };
 
- const startCall = (type: "VOICE" | "VIDEO") => {
+ 
+  const retrySend = (failedId: string, body: string) => {
+    removeMessage(qc, conversationId, failedId);
+    send.mutate(body);
+  };
+
+  const startCall = (type: "VOICE" | "VIDEO") => {
     initiate.mutate(
       {
         conversationId,
@@ -100,7 +109,7 @@ export function ChatThread({
         onError: (err) => {
           const msg =
             err instanceof ApiError && err.status === 409
-              ? err.message 
+              ? err.message
               : "Could not start the call. Please try again.";
           toast.error(msg);
         },
@@ -210,6 +219,7 @@ export function ChatThread({
             isGroup={isGroup}
             onEdit={() => setEditing({ id: message.id, body: message.body ?? "" })}
             onDelete={() => del.mutate(message.id)}
+            onRetry={() => retrySend(message.id, message.body ?? "")}
           />
         ))}
 
@@ -332,12 +342,11 @@ export function ChatThread({
   );
 }
 
-
 function MessageRow({
-  message, mine, isGroup, onEdit, onDelete,
+  message, mine, isGroup, onEdit, onDelete, onRetry,
 }: {
   message: Message; mine: boolean; isGroup: boolean;
-  onEdit: () => void; onDelete: () => void;
+  onEdit: () => void; onDelete: () => void; onRetry: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD;
@@ -346,82 +355,102 @@ function MessageRow({
     && message.type !== "AUDIO" && message.type !== "VIDEO";
   const msAge = Date.now() - new Date(message.createdAt).getTime();
   const withinEditWindow = msAge < EDIT_WINDOW_MS;
-  const canEdit = mine && isText && withinEditWindow;
+  
+  const canEdit = mine && isText && withinEditWindow && !message.pending && !message.failed;
+  const canDelete = mine && !message.pending && !message.failed;
   const minutesLeft = Math.max(0, Math.ceil((EDIT_WINDOW_MS - msAge) / 60000));
   const isAudio = message.type === "VOICE_NOTE" || message.type === "AUDIO";
 
   const mediaSrc = message.mediaUrl
-    ? message.type === "IMAGE"
+  ? message.pending
+    ? message.mediaUrl 
+    : message.type === "IMAGE"
       ? `https://res.cloudinary.com/${CLOUD}/image/upload/${message.mediaUrl}`
       : isAudio
-        ? `https://res.cloudinary.com/${CLOUD}/video/upload/f_mp3/${message.mediaUrl}` // f_mp3 for audio
-        : `https://res.cloudinary.com/${CLOUD}/video/upload/${message.mediaUrl}`        // video
-    : null;
+        ? `https://res.cloudinary.com/${CLOUD}/video/upload/f_mp3/${message.mediaUrl}`
+        : `https://res.cloudinary.com/${CLOUD}/video/upload/${message.mediaUrl}`
+  : null;
 
-  const openMenu = () => { if (mine && !message.deletedAt) setMenuOpen(true); };
+  const openMenu = () => { if (mine && !message.deletedAt && !message.pending && !message.failed) setMenuOpen(true); };
 
   return (
-    <div className={`relative mb-3 flex w-full ${mine ? "justify-end" : "justify-start"}`}>
-      {message.deletedAt ? (
-        <div className="max-w-[70%] rounded-2xl bg-black/5 px-4 py-2 text-[14px] italic text-ink-faint">
-          Message deleted
-        </div>
-      ) : message.type === "IMAGE" && mediaSrc ? (
-        <button onClick={openMenu} className="max-w-[70%]">
-          <img src={mediaSrc} alt="" className="rounded-2xl" loading="lazy" />
-        </button>
-      ) : isAudio && mediaSrc ? (
-        <div className={`relative max-w-[70%] rounded-2xl px-3 py-2 ${mine ? "bg-accent" : "border border-[var(--hairline)] bg-white"}`}>
-          <audio controls src={mediaSrc} className="h-10 w-56" />
-          {mine && (
-            <button
-              onClick={openMenu}
-              aria-label="Message options"
-              className="absolute -right-1 -top-1 grid size-6 place-items-center rounded-full bg-charcoal text-white"
-            >
-              <MoreVertical size={13} />
-            </button>
-          )}
-        </div>
-      ) : message.type === "VIDEO" && mediaSrc ? (
-        <div className="relative max-w-[75%]">
-          <video controls src={mediaSrc} className="rounded-2xl" />
-          {mine && (
-            <button
-              onClick={openMenu}
-              aria-label="Message options"
-              className="absolute right-1 top-1 grid size-7 place-items-center rounded-full bg-black/60 text-white"
-            >
-              <MoreVertical size={15} />
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-          {!mine && (
-            <BlobAvatar
-              size={30}
-              name={message.sender.profile?.displayName ?? "?"}
-              tint={message.sender.profile?.blobTint}
-              avatarUrl={message.sender.profile?.avatarUrl}
-            />
-          )}
+    <div className={`relative mb-3 flex w-full flex-col ${mine ? "items-end" : "items-start"}`}>
+      <div className="flex w-full" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}>
+        {message.deletedAt ? (
+          <div className="max-w-[70%] rounded-2xl bg-black/5 px-4 py-2 text-[14px] italic text-ink-faint">
+            Message deleted
+          </div>
+        ) : message.failed ? (
           <button
-            onClick={openMenu}
-            disabled={!mine}
-            className={`max-w-md rounded-2xl px-4 py-2 text-left ${
-              mine ? "bg-accent text-white" : "border border-[var(--hairline)] bg-white"
-            } ${mine ? "cursor-pointer" : "cursor-default"}`}
+            onClick={onRetry}
+            className="flex max-w-[70%] items-center gap-2 rounded-2xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-4 py-2 text-left"
           >
-            {isGroup && !mine && (
-              <span className="mb-0.5 block text-[11px] font-medium opacity-70">
-                {message.sender.profile?.displayName}
-              </span>
-            )}
-            {message.body}
-            {message.editedAt && <span className="ml-1.5 text-[11px] opacity-60">edited</span>}
+            <span className="text-[15px] text-ink">{message.body}</span>
+            <RotateCw size={14} className="shrink-0 text-danger" />
           </button>
-        </div>
+        ) : message.type === "IMAGE" && mediaSrc ? (
+          <button onClick={openMenu} className={`max-w-[70%] ${message.pending ? "opacity-60" : ""}`}>
+            <img src={mediaSrc} alt="" className="rounded-2xl" loading="lazy" />
+          </button>
+        ) : isAudio && mediaSrc ? (
+          <div className={`relative max-w-[70%] rounded-2xl px-3 py-2 ${message.pending ? "opacity-60" : ""} ${mine ? "bg-accent" : "border border-[var(--hairline)] bg-white"}`}>
+            <audio controls src={mediaSrc} className="h-10 w-56" />
+            {mine && !message.pending && (
+              <button
+                onClick={openMenu}
+                aria-label="Message options"
+                className="absolute -right-1 -top-1 grid size-6 place-items-center rounded-full bg-charcoal text-white"
+              >
+                <MoreVertical size={13} />
+              </button>
+            )}
+          </div>
+        ) : message.type === "VIDEO" && mediaSrc ? (
+          <div className={`relative max-w-[75%] ${message.pending ? "opacity-60" : ""}`}>
+            <video controls src={mediaSrc} className="rounded-2xl" />
+            {mine && !message.pending && (
+              <button
+                onClick={openMenu}
+                aria-label="Message options"
+                className="absolute right-1 top-1 grid size-7 place-items-center rounded-full bg-black/60 text-white"
+              >
+                <MoreVertical size={15} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""} ${message.pending ? "opacity-60" : ""}`}>
+            {!mine && (
+              <BlobAvatar
+                size={30}
+                name={message.sender.profile?.displayName ?? "?"}
+                tint={message.sender.profile?.blobTint}
+                avatarUrl={message.sender.profile?.avatarUrl}
+              />
+            )}
+            <button
+              onClick={openMenu}
+              disabled={!mine || !!message.pending}
+              className={`max-w-md rounded-2xl px-4 py-2 text-left ${
+                mine ? "bg-accent text-white" : "border border-[var(--hairline)] bg-white"
+              } ${mine && !message.pending ? "cursor-pointer" : "cursor-default"}`}
+            >
+              {isGroup && !mine && (
+                <span className="mb-0.5 block text-[11px] font-medium opacity-70">
+                  {message.sender.profile?.displayName}
+                </span>
+              )}
+              {message.body}
+              {message.editedAt && <span className="ml-1.5 text-[11px] opacity-60">edited</span>}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {(message.pending || message.failed) && (
+        <p className={`mt-1 px-1 text-[11px] ${message.failed ? "text-danger" : "text-ink-faint"}`}>
+          {message.failed ? "Failed to send · tap to retry" : "Sending…"}
+        </p>
       )}
 
       {menuOpen && (
@@ -437,12 +466,14 @@ function MessageRow({
                 <span className="ml-auto text-[11px] text-ink-faint">{minutesLeft}m left</span>
               </button>
             )}
-            <button
-              onClick={() => { setMenuOpen(false); onDelete(); }}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[14px] text-danger hover:bg-[var(--danger)]/5"
-            >
-              <Trash2 size={15} /> Delete
-            </button>
+            {canDelete && (
+              <button
+                onClick={() => { setMenuOpen(false); onDelete(); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[14px] text-danger hover:bg-[var(--danger)]/5"
+              >
+                <Trash2 size={15} /> Delete
+              </button>
+            )}
           </div>
         </>
       )}
