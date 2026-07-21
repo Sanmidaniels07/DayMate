@@ -9,6 +9,7 @@ import { useSignup } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api';
 import { Select } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { SignupHero } from '@/components/features/sign-up-hero';
 
 const HERO_POINTS = [
   { icon: Cake, text: 'Meet people who share your exact birthday', gradient: 'linear-gradient(135deg, var(--blob-blush), var(--celebrate))' },
@@ -61,54 +62,8 @@ export default function SignupPage() {
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       {/* ---- Hero half ---- */}
-      <div className="relative hidden overflow-hidden p-14 text-white lg:flex lg:flex-col lg:justify-between"
-        style={{ background: 'linear-gradient(150deg, var(--charcoal) 0%, #1F3A8F 100%)' }}>
-        <motion.div
-          className="absolute -left-24 -top-24 size-96 rounded-full blur-3xl"
-          style={{ background: 'var(--accent)' }}
-          animate={{ opacity: [0.2, 0.36, 0.2], scale: [1, 1.15, 1] }}
-          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute -bottom-20 right-10 size-72 rounded-full blur-3xl"
-          style={{ background: 'var(--celebrate)' }}
-          animate={{ opacity: [0.06, 0.14, 0.06], scale: [1, 1.2, 1] }}
-          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
-        />
-        {BLOBS.map((b, i) => (
-          <motion.div key={i} className="absolute rounded-full shadow-lg"
-            style={{ left: b.x, top: b.y, width: b.size, height: b.size, background: b.tint }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 0.9, scale: 1, y: [0, -12, 0] }}
-            transition={{
-              opacity: { duration: 0.5, delay: b.delay },
-              scale: { duration: 0.5, delay: b.delay, type: 'spring' },
-              y: { duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: b.delay },
-            }} />
-        ))}
-
-        <div className="relative">
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/50">DayMate</p>
-          <h1 className="mt-6 font-display text-[3.25rem] font-semibold leading-[1.03] tracking-[-0.02em]">
-            The people who<br /><span className="italic text-celebrate">share your day</span>
-          </h1>
-          <p className="mt-5 max-w-md text-[16px] leading-relaxed text-white/70">
-            A social world built around birthdays — find your twins, join your circles, and celebrate together.
-          </p>
-        </div>
-
-        <div className="relative flex flex-col gap-5">
-          {HERO_POINTS.map((p, i) => (
-            <motion.div key={p.text} className="flex items-center gap-3.5"
-              initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 + i * 0.12 }}>
-              <span className="grid size-10 shrink-0 place-items-center rounded-full shadow-sm" style={{ background: p.gradient }}>
-                <p.icon size={18} className="text-white" />
-              </span>
-              <span className="text-[15px] text-white/85">{p.text}</span>
-            </motion.div>
-          ))}
-        </div>
+       <div className="hidden lg:block">
+        <SignupHero />
       </div>
 
       {/* ---- Form half ---- */}
