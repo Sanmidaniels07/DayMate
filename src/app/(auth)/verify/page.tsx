@@ -1,22 +1,40 @@
 'use client';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useVerifyEmail } from '@/hooks/use-auth';
+import { useVerifyEmail, useResendOtp } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api';
+
+const RESEND_WAIT_S = 60;
 
 function VerifyInner() {
   const router = useRouter();
   const email = useSearchParams().get('email') ?? '';
   const verify = useVerifyEmail();
+  const resend = useResendOtp();
   const [code, setCode] = useState('');
+  const [cooldown, setCooldown] = useState(RESEND_WAIT_S);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     verify.mutate({ email, code }, { onSuccess: () => router.replace('/login?verified=1') });
   };
+
+  const doResend = () => {
+    if (cooldown > 0 || resend.isPending || !email) return;
+    resend.mutate(email, {
+      onSettled: () => setCooldown(RESEND_WAIT_S), 
+    });
+  };
+
   const errorMsg = verify.error instanceof ApiError ? verify.error.message : null;
 
   return (
@@ -36,6 +54,29 @@ function VerifyInner() {
               Verify
             </Button>
           </form>
+
+          {/* Resend with cooldown */}
+          <div className="mt-4">
+            {cooldown > 0 ? (
+              <p className="text-[13px] text-ink-faint">
+                Didn&apos;t get a code? Resend in{' '}
+                <span className="font-mono font-semibold text-ink-soft">0:{String(cooldown).padStart(2, '0')}</span>
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={doResend}
+                disabled={resend.isPending}
+                className="text-[13px] font-semibold text-accent disabled:opacity-60"
+              >
+                {resend.isPending ? 'Sending…' : "Didn't get a code? Resend"}
+              </button>
+            )}
+            {resend.isSuccess && cooldown > 0 && (
+              <p className="mt-1 text-[12px] text-[var(--success)]">A fresh code is on its way.</p>
+            )}
+          </div>
+
           <p className="mt-6 text-[13px] text-ink-soft">
             Wrong email? <Link href="/signup" className="font-semibold text-accent">Start over</Link>
           </p>

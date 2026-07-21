@@ -13,7 +13,7 @@ interface Props {
 
 export function PersonRow({ username, displayName, avatarUrl, blobTint, subtitle, action }: Props) {
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 rounded-2xl py-3 transition-colors hover:bg-[var(--accent-soft)]/40">
       <Link href={`/u/${username}`} className="flex min-w-0 flex-1 items-center gap-3">
         <BlobAvatar name={displayName} tint={blobTint} avatarUrl={avatarUrl} size={44} />
         <div className="min-w-0">

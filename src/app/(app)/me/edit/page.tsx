@@ -1,15 +1,23 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Check, MapPin, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, MapPin, Loader2, Heart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BlobAvatar } from "@/components/ui/blob-avatar";
+import { Toggle } from "@/components/ui/toggle";
 import { useMyProfile, useUpdateProfile } from "@/hooks/use-settings";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 
-type Form = { displayName: string; bio: string; city: string; country: string };
+type Form = {
+  displayName: string;
+  bio: string;
+  city: string;
+  country: string;
+  anniversaryDate: string;      // "" = none / cleared
+  showAnniversary: boolean;
+};
 
 export default function EditProfilePage() {
   const { data } = useMyProfile();
@@ -17,27 +25,29 @@ export default function EditProfilePage() {
   const { upload, uploading } = useAvatarUpload();
   const router = useRouter();
 
-  const [form, setForm] = useState<Form>({
-    displayName: "",
-    bio: "",
-    city: "",
-    country: "",
-  });
-  const [original, setOriginal] = useState<Form>({
-    displayName: "",
-    bio: "",
-    city: "",
-    country: "",
-  });
+  const blank: Form = {
+    displayName: "", bio: "", city: "", country: "",
+    anniversaryDate: "", showAnniversary: true,
+  };
+  const [form, setForm] = useState<Form>(blank);
+  const [original, setOriginal] = useState<Form>(blank);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (data) {
-      const next = {
-        displayName: data.data.displayName,
-        bio: data.data.bio ?? "",
-        city: data.data.city ?? "",
-        country: data.data.country ?? "",
+      const d = data.data;
+    
+      const anniversaryDate =
+        d.anniversaryMonth && d.anniversaryDay
+          ? `2000-${String(d.anniversaryMonth).padStart(2, "0")}-${String(d.anniversaryDay).padStart(2, "0")}`
+          : "";
+      const next: Form = {
+        displayName: d.displayName,
+        bio: d.bio ?? "",
+        city: d.city ?? "",
+        country: d.country ?? "",
+        anniversaryDate,
+        showAnniversary: d.showAnniversary ?? true,
       };
       setForm(next);
       setOriginal(next);
@@ -47,10 +57,7 @@ export default function EditProfilePage() {
   const p = data?.data;
 
   const isDirty = useMemo(
-    () =>
-      Object.keys(form).some(
-        (k) => form[k as keyof Form] !== original[k as keyof Form],
-      ),
+    () => Object.keys(form).some((k) => form[k as keyof Form] !== original[k as keyof Form]),
     [form, original],
   );
 
@@ -60,13 +67,21 @@ export default function EditProfilePage() {
   };
 
   const save = () => {
-    update.mutate(form, {
-      onSuccess: () => {
-        setOriginal(form);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+    const { anniversaryDate, ...rest } = form;
+    update.mutate(
+      {
+        ...rest,
+        
+        anniversaryDate: anniversaryDate ? anniversaryDate : null,
       },
-    });
+      {
+        onSuccess: () => {
+          setOriginal(form);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
   };
 
   const set =
@@ -75,7 +90,7 @@ export default function EditProfilePage() {
       setForm((f) => ({ ...f, [key]: e.target.value }));
 
   return (
-    <div className="mx-auto flex min-h-screen  flex-col pb-28 rounded-lg shadow-lg ">
+    <div className="mx-auto flex min-h-screen flex-col pb-28 rounded-lg shadow-lg">
       {/* Sticky header */}
       <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--hairline)] bg-[var(--surface)]/80 px-4 py-3.5 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -177,6 +192,41 @@ export default function EditProfilePage() {
 
         <div className="h-px bg-[var(--hairline)]" />
 
+        {/* Anniversary */}
+        <section className="flex flex-col gap-3">
+          <h2 className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-ink-faint">
+            <Heart size={12} /> Anniversary
+          </h2>
+          <p className="text-[13px] text-ink-soft">
+            Optional — meet other couples who share your day. Only the month and day are used, never the year.
+          </p>
+          <Input
+            label="Wedding anniversary"
+            type="date"
+            value={form.anniversaryDate}
+            onChange={set("anniversaryDate")}
+          />
+          {form.anniversaryDate && (
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, anniversaryDate: "" }))}
+              className="self-start text-[13px] font-medium text-danger"
+            >
+              Remove anniversary
+            </button>
+          )}
+          <div className="rounded-2xl bg-[var(--surface-raised)] px-4">
+            <Toggle
+              checked={form.showAnniversary}
+              onChange={(v) => setForm((f) => ({ ...f, showAnniversary: v }))}
+              label="Show on my profile"
+              description="Others can see your anniversary date."
+            />
+          </div>
+        </section>
+
+        <div className="h-px bg-[var(--hairline)]" />
+
         {/* Location */}
         <section className="flex flex-col gap-3">
           <h2 className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-ink-faint">
@@ -193,7 +243,7 @@ export default function EditProfilePage() {
         </section>
       </div>
 
-      {/* Sticky bottom save bar — mobile-friendly, only when there's something to save */}
+      {/* Sticky bottom save bar */}
       <div
         className={`fixed inset-x-0 bottom-0 z-20 border-t border-[var(--hairline)] bg-[var(--surface)]/90 px-4 py-3 backdrop-blur-md transition-transform duration-300 ${
           isDirty ? "translate-y-0" : "translate-y-full"

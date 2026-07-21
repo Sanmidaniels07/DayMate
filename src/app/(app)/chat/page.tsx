@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MessageCircle, Plus } from "lucide-react";

@@ -3,6 +3,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { PresenceAvatar } from "@/components/ui/presence-avatar";
 import { getBlobTintVar } from "@/components/ui/blob-avatar";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,7 @@ import { MONTHS } from "@/lib/months";
 import { timeAgo } from "@/lib/time";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/toast";
-import { Cake, MapPin, MoreHorizontal } from "lucide-react";
-
+import { Cake, MapPin, MoreHorizontal, MessageCircle, Camera, Loader2, BadgeCheck } from "lucide-react";
 
 function useBlock(username: string) {
   const qc = useQueryClient();
@@ -37,16 +37,28 @@ export default function ProfilePage({
   const { data, isLoading, error } = useProfile(username);
 
   const p = data?.data;
-  const follow = useToggleFollow(
-    username,
-    p?.relationship?.isFollowing ?? false,
-  );
+  const follow = useToggleFollow(username, p?.relationship?.isFollowing ?? false);
   const presence = usePresence(username, !p?.isOwner);
   const timeline = useAuthorFeed(username);
   const posts = timeline.data?.pages.flatMap((pg) => pg.data) ?? [];
   const [reporting, setReporting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const block = useBlock(username);
+
+  // Cover photo — frontend-only for now (local preview, no persistence yet).
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+
+  const onCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverUploading(true);
+    const url = URL.createObjectURL(file);
+    await new Promise((r) => setTimeout(r, 500));
+    setCoverPreview(url);
+    setCoverUploading(false);
+    toast.success("Cover photo updated");
+  };
 
   if (isLoading) return <ProfileSkeleton />;
 
@@ -62,140 +74,210 @@ export default function ProfilePage({
             It may have been removed, or the username might be wrong.
           </p>
         </div>
-        <Link
-          href="/discover"
-          className="mt-1 rounded-full bg-accent px-5 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-95"
-        >
+        <Link href="/discover"
+          className="mt-1 rounded-full bg-accent px-5 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-95">
           Back to Discover
         </Link>
       </div>
     );
   }
 
+  const stats = [
+    { label: "Friends", value: (p as any).friendCount ?? 0, color: "linear-gradient(135deg, var(--blob-peach), #E8703D)" },
+    { label: "Circles", value: (p as any).communityCount ?? 0, color: "linear-gradient(135deg, var(--blob-lavender), #7C6FE0)" },
+    { label: "Posts", value: (p as any).postCount ?? posts.length, color: "linear-gradient(135deg, var(--charcoal), var(--accent))" },
+  ];
+  const hasCover = !!coverPreview;
+  const isOnline = !p.isOwner ? presence.data?.data.online : undefined;
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="card overflow-hidden">
-        <div
-          className="h-28"
-          style={{
-            background: `linear-gradient(135deg, ${getBlobTintVar(p.blobTint)}, color-mix(in srgb, ${getBlobTintVar(p.blobTint)} 55%, black))`,
-          }}
-        />
-        <div className="px-5 pb-5">
-          <div className="-mt-11 flex items-end justify-between">
-            <div className="rounded-full shadow-lg ring-4 ring-[var(--surface)]">
-              <PresenceAvatar
-                name={p.displayName}
-                tint={p.blobTint}
-                avatarUrl={p.avatarUrl}
-                size={84}
-                online={!p.isOwner ? presence.data?.data.online : undefined}
-              />
-            </div>
-            {p.isOwner ? (
-              <Button variant="ghost" onClick={() => router.push("/me/edit")}>
-                Edit profile
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => follow.mutate()}
-                  disabled={follow.isPending}
-                  className={`rounded-full px-4 py-2 text-[14px] font-semibold transition-all active:scale-95 ${
-                    p.relationship?.isFollowing
-                      ? "border border-[var(--hairline)] text-ink"
-                      : "bg-accent text-white shadow-sm hover:opacity-90"
-                  }`}
-                >
-                  {p.relationship?.isFollowing ? "Following" : "Follow"}
-                </button>
-                <RelationshipButton profile={p} />
+      {/* ---- Identity card ---- */}
+      <div className="card overflow-hidden !p-0">
+        {/* ---- Cover — clips the image, does NOT contain the avatar ---- */}
+        <div className="relative h-56 w-full overflow-hidden sm:h-64">
+          {hasCover ? (
+            <img src={coverPreview!} alt="" className="size-full object-cover" />
+          ) : (
+            <div
+              className="size-full"
+              style={{
+                background: `linear-gradient(120deg, ${getBlobTintVar(p.blobTint)}, var(--accent-soft) 45%, var(--celebrate-soft) 90%)`,
+              }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
 
-                <div className="relative">
-                  <button
-                    onClick={() => setMenuOpen((v) => !v)}
-                    aria-label={`More options for @${p.username}`}
-                    className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-black/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-                  >
-                    <MoreHorizontal size={20} />
-                  </button>
-                  {menuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-11 z-20 w-44 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] shadow-[var(--shadow-float)]">
-                        <button
-                          onClick={() => { setMenuOpen(false); setReporting(true); }}
-                          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] hover:bg-black/[0.03]"
-                        >
-                          Report @{p.username}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMenuOpen(false);
-                            block.mutate(undefined, { onSuccess: () => toast.success(`Blocked @${p.username}`) });
-                          }}
-                          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] text-danger hover:bg-[var(--danger)]/5"
-                        >
-                          Block @{p.username}
-                        </button>
-                      </div>
-                    </>
-                  )}
+          {p.isOwner && (
+            <label className="absolute right-4 top-4 z-20 flex cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-[13px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/55">
+              {coverUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+              {coverUploading ? "Uploading…" : hasCover ? "Edit cover" : "Add cover"}
+              <input type="file" accept="image/*" className="hidden" onChange={onCoverFile} disabled={coverUploading} />
+            </label>
+          )}
+        </div>
+
+        {/* ---- Avatar + content — a SIBLING of the cover, never clipped ---- */}
+        <div className="relative px-5 sm:px-6">
+          {/* Avatar overlaps upward into the cover via negative top margin */}
+          <div className="absolute -top-12 left-0 sm:-top-14 sm:left-0">
+            <div className="relative">
+              <div
+                className="rounded-full p-[3.5px] shadow-[0_10px_28px_rgba(22,35,79,0.28)]"
+                style={{
+                  background: isOnline
+                    ? "conic-gradient(from 180deg, var(--celebrate), var(--accent), #7C6FE0, var(--celebrate))"
+                    : "linear-gradient(135deg, var(--accent), var(--charcoal))",
+                }}
+              >
+                <div className="rounded-full bg-[var(--surface)] p-[3px]">
+                  <PresenceAvatar
+                    name={p.displayName}
+                    tint={p.blobTint}
+                    avatarUrl={p.avatarUrl}
+                    size={104}
+                    online={undefined}
+                  />
                 </div>
               </div>
-            )}
+              {isOnline && (
+                <span className="absolute bottom-2 left-1.5 size-4 rounded-full border-[3px] border-[var(--surface)] bg-[var(--success)] shadow-sm sm:size-[18px]" />
+              )}
+              {p.relationship?.isFriend && (
+                <span className="absolute -right-0.5 bottom-1 grid size-7 place-items-center rounded-full border-[3px] border-[var(--surface)] shadow-sm"
+                  style={{ background: "linear-gradient(135deg, var(--accent), var(--charcoal))" }}>
+                  <BadgeCheck size={13} className="text-white" />
+                </span>
+              )}
+            </div>
           </div>
 
-          <h1 className="mt-3 text-[22px] font-semibold leading-tight tracking-tight">
-            {p.displayName}
-          </h1>
-          <p className="text-[14px] text-ink-faint">@{p.username}</p>
+          {/* Content — padded to clear the overlapping avatar */}
+          <div className="pb-5 pt-16 sm:pt-[4.5rem]">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h1 className="font-display text-[24px] font-semibold italic leading-tight tracking-tight">
+                    {p.displayName}
+                  </h1>
+                  {p.relationship?.isFriend && <BadgeCheck size={18} className="text-accent" />}
+                </div>
+                <p className="text-[14px] font-medium text-accent">@{p.username}</p>
 
-          {!p.isOwner && presence.data?.data && (
-            <p className="mt-0.5 text-[12px] text-ink-faint">
-              {presence.data.data.online ? (
-                <span className="text-[var(--success)]">● Online now</span>
-              ) : presence.data.data.lastSeenAt ? (
-                `Last seen ${timeAgo(presence.data.data.lastSeenAt)}`
-              ) : null}
-            </p>
-          )}
+                {!p.isOwner && presence.data?.data && !isOnline && presence.data.data.lastSeenAt && (
+                  <p className="mt-0.5 text-[12px] text-ink-faint">
+                    Last seen {timeAgo(presence.data.data.lastSeenAt)}
+                  </p>
+                )}
+                {isOnline && (
+                  <p className="mt-0.5 text-[12px] font-medium text-[var(--success)]">● Online now</p>
+                )}
 
-          {p.bio && (
-            <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
-              {p.bio}
-            </p>
-          )}
+                {p.bio && (
+                  <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-ink-soft">{p.bio}</p>
+                )}
+              </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 py-1.5 text-[13px] font-medium text-ink-soft">
-              <Cake size={14} className="text-ink-faint" />
-              {MONTHS[p.birthMonth - 1]} {p.birthDay}
-            </span>
-            {p.city && (
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 py-1.5 text-[13px] font-medium text-ink-soft">
-                <MapPin size={14} className="text-ink-faint" />
-                {p.city}
-                {p.country ? `, ${p.country}` : ""}
+              {/* Stats */}
+              <div className="flex shrink-0 gap-2">
+                {stats.map((s) => (
+                  <div key={s.label} className="flex flex-col items-center gap-1">
+                    <div
+                      className="grid size-11 place-items-center rounded-full text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(22,35,79,0.18)]"
+                      style={{ background: s.color }}
+                    >
+                      {s.value}
+                    </div>
+                    <span className="text-[10px] text-ink-faint">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {p.isOwner ? (
+                <Button variant="ghost" onClick={() => router.push("/me/edit")}>
+                  Edit profile
+                </Button>
+              ) : (
+                <>
+                  <motion.button whileTap={{ scale: 0.96 }}
+                    onClick={() => follow.mutate()}
+                    disabled={follow.isPending}
+                    className={`rounded-full px-4 py-2 text-[14px] font-semibold shadow-sm transition-opacity ${
+                      p.relationship?.isFollowing ? "border border-[var(--hairline)] text-ink" : "text-white"
+                    }`}
+                    style={!p.relationship?.isFollowing ? { background: "linear-gradient(135deg, var(--accent), var(--charcoal))" } : undefined}
+                  >
+                    {p.relationship?.isFollowing ? "Following" : "Follow"}
+                  </motion.button>
+                  <RelationshipButton profile={p} />
+                  {p.relationship?.isFriend && (
+                    <Link href={`/chat?with=${p.username}`}
+                      className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
+                      aria-label="Message">
+                      <MessageCircle size={18} />
+                    </Link>
+                  )}
+                  <div className="relative">
+                    <button
+                      onClick={() => setMenuOpen((v) => !v)}
+                      aria-label={`More options for @${p.username}`}
+                      className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
+                    >
+                      <MoreHorizontal size={20} />
+                    </button>
+                    {menuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                        <div className="absolute right-0 top-11 z-20 w-44 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-float)]">
+                          <button
+                            onClick={() => { setMenuOpen(false); setReporting(true); }}
+                            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] hover:bg-[var(--accent-soft)]"
+                          >
+                            Report @{p.username}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMenuOpen(false);
+                              block.mutate(undefined, { onSuccess: () => toast.success(`Blocked @${p.username}`) });
+                            }}
+                            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] text-danger hover:bg-[var(--danger)]/5"
+                          >
+                            Block @{p.username}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Meta chips */}
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--hairline)] pt-4">
+              <span className="flex items-center gap-1.5 rounded-full bg-[var(--celebrate-soft)] px-3 py-1.5 text-[13px] font-medium text-[#8a6410]">
+                <Cake size={14} />
+                {MONTHS[p.birthMonth - 1]} {p.birthDay}
               </span>
-            )}
-            {p.ageBracket && (
-              <span className="flex items-center rounded-full bg-[var(--surface-raised)] px-3 py-1.5 font-mono text-[13px] text-ink-faint">
-                {p.ageBracket}
-              </span>
-            )}
+              {p.city && (
+                <span className="flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[13px] font-medium text-accent">
+                  <MapPin size={14} />
+                  {p.city}{p.country ? `, ${p.country}` : ""}
+                </span>
+              )}
+              {p.ageBracket && (
+                <span className="flex items-center rounded-full bg-[var(--surface-raised)] px-3 py-1.5 font-mono text-[13px] text-ink-faint">
+                  {p.ageBracket}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {!p.isOwner && p.relationship?.isFriend && (
-        <Link href={`/chat?with=${p.username}`}>
-          <Button variant="primary" className="w-full">
-            Message
-          </Button>
-        </Link>
-      )}
-
+      {/* ---- Posts ---- */}
       <div className="flex flex-col gap-3">
         <h2 className="px-1 text-[12px] font-semibold uppercase tracking-wider text-ink-faint">
           Posts
@@ -236,16 +318,12 @@ export default function ProfilePage({
 function ProfileSkeleton() {
   return (
     <div className="flex flex-col gap-5">
-      <div className="card overflow-hidden">
-        <div className="skeleton h-28 rounded-none" />
-        <div className="px-5 pb-5">
-          <div className="-mt-11 flex items-end justify-between">
-            <div className="skeleton size-[84px] rounded-full ring-4 ring-[var(--surface)]" />
-            <div className="skeleton h-9 w-24 rounded-full" />
-          </div>
-          <div className="skeleton mt-4 h-5 w-40 rounded" />
+      <div className="card overflow-hidden !p-0">
+        <div className="skeleton h-56 rounded-none sm:h-64" />
+        <div className="px-5 pb-5 pt-16 sm:px-6">
+          <div className="skeleton h-5 w-40 rounded" />
           <div className="skeleton mt-2 h-3.5 w-24 rounded" />
-          <div className="skeleton mt-4 h-3.5 w-56 rounded" />
+          <div className="skeleton mt-4 h-9 w-32 rounded-full" />
         </div>
       </div>
       <div className="flex flex-col gap-3">

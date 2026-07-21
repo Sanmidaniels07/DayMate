@@ -51,15 +51,24 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
 
   return (
     <Modal open={open} onClose={() => { reset(); onClose(); }}>
-      <div className="flex h-full flex-col bg-surface">
+      <div className="relative flex h-full flex-col overflow-hidden bg-surface">
+        {/* Ambient wash */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              'radial-gradient(ellipse 500px 260px at 10% 0%, var(--accent-soft), transparent 60%), radial-gradient(ellipse 400px 220px at 100% 15%, var(--celebrate-soft), transparent 55%)',
+          }}
+        />
+
         {/* Header */}
-        <header className="flex items-center gap-3 border-b border-[var(--hairline)] px-4 py-3">
-          <button
+        <header className="relative z-10 flex items-center gap-3 border-b border-[var(--hairline)] px-4 py-3 backdrop-blur-sm">
+          <motion.button whileTap={{ scale: 0.9 }}
             onClick={() => { reset(); onClose(); }}
-            className="grid size-9 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-[var(--surface-raised)]"
+            className="grid size-9 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
           >
             <X size={20} />
-          </button>
+          </motion.button>
           <div className="min-w-0 flex-1">
             <p className="font-display text-[17px] font-semibold leading-tight">New group</p>
             <p className="text-[12px] text-ink-faint">
@@ -68,20 +77,21 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
           {/* Group identity */}
           <div className="flex items-center gap-3 border-b border-[var(--hairline)] px-4 py-4">
             <motion.div
               animate={{ scale: title.trim() ? 1 : 0.94 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--celebrate-soft)] to-[var(--accent-soft)]"
+              className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl shadow-[0_4px_14px_rgba(22,35,79,0.16)]"
+              style={{ background: 'linear-gradient(135deg, var(--blob-blush), var(--celebrate))' }}
             >
               {title.trim() ? (
-                <span className="font-display text-[18px] font-semibold text-ink/70">
+                <span className="font-display text-[18px] font-semibold text-white drop-shadow-sm">
                   {title.trim().slice(0, 1).toUpperCase()}
                 </span>
               ) : (
-                <Users size={22} className="text-[#8a6410]" />
+                <Users size={22} className="text-white" />
               )}
             </motion.div>
             <input
@@ -96,7 +106,7 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
             )}
           </div>
 
-          {/* Selected members — avatar stack + scrollable chips */}
+          {/* Selected members */}
           <AnimatePresence initial={false}>
             {selected.size > 0 && (
               <motion.div
@@ -128,7 +138,8 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.85 }}
                       onClick={() => toggle(f.username)}
-                      className="flex items-center gap-1.5 rounded-full bg-accent/10 py-1 pl-1 pr-2.5 text-[13px] font-medium text-accent transition-colors hover:bg-accent/15"
+                      className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-[13px] font-medium text-accent shadow-sm transition-colors hover:opacity-85"
+                      style={{ background: 'var(--accent-soft)', border: '1px solid rgb(59 111 234 / 0.2)' }}
                     >
                       <BlobAvatar name={f.displayName} tint={f.blobTint} avatarUrl={f.avatarUrl} size={22} />
                       {f.displayName}
@@ -152,7 +163,7 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
             {q.length > 0 && (
               <button
                 onClick={() => setQ('')}
-                className="grid size-6 shrink-0 place-items-center rounded-full text-ink-faint transition-colors hover:bg-[var(--surface-raised)]"
+                className="grid size-6 shrink-0 place-items-center rounded-full text-ink-faint transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
               >
                 <X size={13} />
               </button>
@@ -163,8 +174,9 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
           <div className="flex-1 overflow-y-auto px-2 py-2">
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-14 text-center">
-                <div className="grid size-12 place-items-center rounded-2xl bg-[var(--surface-raised)] text-ink-faint">
-                  <UsersRound size={22} />
+                <div className="grid size-12 place-items-center rounded-2xl"
+                  style={{ background: 'linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))' }}>
+                  <UsersRound size={22} className="text-accent" />
                 </div>
                 <p className="text-[14px] text-ink-faint">
                   {friends.length === 0 ? 'Add some friends first.' : 'No friends match your search.'}
@@ -180,11 +192,12 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i, 10) * 0.02, duration: 0.15 }}
                     onClick={() => toggle(f.username)}
-                    className={`flex w-full items-center gap-3 rounded-2xl border px-2.5 py-2.5 text-left transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-2xl border px-2.5 py-2.5 text-left transition-all ${
                       on
-                        ? 'border-accent/30 bg-[var(--accent-soft)]'
+                        ? 'border-transparent shadow-sm'
                         : 'border-transparent hover:bg-[var(--surface-raised)]'
                     }`}
+                    style={on ? { background: 'var(--accent-soft)', boxShadow: 'inset 0 0 0 1px rgb(59 111 234 / 0.25)' } : undefined}
                   >
                     <BlobAvatar name={f.displayName} tint={f.blobTint} avatarUrl={f.avatarUrl} size={44} />
                     <div className="min-w-0 flex-1">
@@ -194,9 +207,10 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
                     <motion.span
                       animate={{ scale: on ? 1 : 0.8, opacity: on ? 1 : 0.35 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                      className={`grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors ${
-                        on ? 'border-accent bg-accent text-white' : 'border-[var(--hairline)]'
-                      }`}
+                      className="grid size-6 shrink-0 place-items-center rounded-full border-2 text-white transition-colors"
+                      style={on
+                        ? { background: 'linear-gradient(135deg, var(--accent), var(--charcoal))', borderColor: 'transparent' }
+                        : { borderColor: 'var(--hairline)' }}
                     >
                       {on && <Check size={14} />}
                     </motion.span>
@@ -207,14 +221,24 @@ export function CreateGroupModal({ open, onClose, onCreated }: {
           </div>
 
           {/* Create */}
-          <div className="border-t border-[var(--hairline)] p-4">
-            <Button onClick={submit} loading={create.isPending} disabled={!canSubmit} className="w-full">
-              {canSubmit
-                ? `Create group · ${selected.size}`
-                : !title.trim()
-                ? 'Name your group to continue'
-                : 'Add at least one friend'}
-            </Button>
+          <div className="border-t border-[var(--hairline)] bg-[var(--surface)] p-4">
+            <motion.button
+              whileTap={canSubmit ? { scale: 0.98 } : undefined}
+              onClick={submit}
+              disabled={!canSubmit || create.isPending}
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] py-3 text-[15px] font-semibold text-white shadow-[0_4px_16px_rgba(59,111,234,0.25)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: canSubmit ? 'linear-gradient(135deg, var(--accent), var(--charcoal))' : 'var(--ink-faint)' }}
+            >
+              {create.isPending ? (
+                <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : canSubmit ? (
+                `Create group · ${selected.size}`
+              ) : !title.trim() ? (
+                'Name your group to continue'
+              ) : (
+                'Add at least one friend'
+              )}
+            </motion.button>
           </div>
         </div>
       </div>

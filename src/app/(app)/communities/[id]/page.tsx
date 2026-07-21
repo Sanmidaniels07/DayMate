@@ -1,7 +1,8 @@
 'use client';
 import { use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Cake, CalendarDays, Users2, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Cake, CalendarDays, Users2, Sparkles, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PersonRow } from '@/components/features/person-row';
 import { communityGlyph } from '@/lib/communities';
@@ -9,23 +10,26 @@ import {
   useCommunity, useCommunityMembers, useJoinCommunity, useLeaveCommunity,
 } from '@/hooks/use-communities';
 
-
-const EMBLEMS: Record<string, { icon: typeof Cake; tint: string }> = {
-  BIRTHDAY: { icon: Cake, tint: 'var(--blob-blush)' },
-  BIRTH_MONTH: { icon: CalendarDays, tint: 'var(--blob-powder)' },
-  AGE_BRACKET: { icon: Users2, tint: 'var(--blob-sage)' },
+const EMBLEMS: Record<string, { icon: typeof Cake; gradient: string }> = {
+  BIRTHDAY: { icon: Cake, gradient: 'linear-gradient(135deg, var(--blob-blush), var(--celebrate))' },
+  BIRTH_MONTH: { icon: CalendarDays, gradient: 'linear-gradient(135deg, var(--blob-powder), var(--accent))' },
+  AGE_BRACKET: { icon: Users2, gradient: 'linear-gradient(135deg, var(--blob-sage), #2FA36B)' },
+  ANNIVERSARY: { icon: Heart, gradient: 'linear-gradient(135deg, var(--blob-blush), #D4537E)' },
 };
 
-function CommunityEmblem({ type, size = 84 }: { type?: string; size?: number }) {
-  const e = EMBLEMS[type ?? ''] ?? { icon: Sparkles, tint: 'var(--blob-lavender)' };
+function CommunityEmblem({ type, size = 88 }: { type?: string; size?: number }) {
+  const e = EMBLEMS[type ?? ''] ?? { icon: Sparkles, gradient: 'linear-gradient(135deg, var(--blob-lavender), var(--accent))' };
   const Icon = e.icon;
   return (
-    <div
-      className="grid shrink-0 place-items-center rounded-[28px] shadow-[0_4px_16px_rgba(0,0,0,0.1)] ring-4 ring-[var(--surface-raised)]"
-      style={{ width: size, height: size, background: e.tint }}
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className="grid shrink-0 place-items-center rounded-[28px] shadow-[0_10px_28px_rgba(22,35,79,0.22)] ring-4 ring-[var(--surface)]"
+      style={{ width: size, height: size, background: e.gradient }}
     >
-      <Icon size={size * 0.4} strokeWidth={1.6} className="text-ink/75" />
-    </div>
+      <Icon size={size * 0.4} strokeWidth={1.6} className="text-white drop-shadow-sm" />
+    </motion.div>
   );
 }
 
@@ -55,6 +59,7 @@ export default function CommunityDetailPage({ params }: { params: Promise<{ id: 
   const glyph = communityGlyph(c);
   const memberRows = members.data?.pages.flatMap((p) => p.data) ?? [];
   const membership = c.membership;
+  const gradient = EMBLEMS[c.type ?? '']?.gradient ?? 'linear-gradient(135deg, var(--blob-lavender), var(--accent))';
 
   return (
     <div className="flex flex-col gap-5">
@@ -63,12 +68,11 @@ export default function CommunityDetailPage({ params }: { params: Promise<{ id: 
         <ArrowLeft size={20} />
       </Link>
 
-      <div className="card animate-slideup overflow-hidden">
-       
-        <div
-          className="h-20"
-          style={{ background: `linear-gradient(180deg, ${EMBLEMS[c.type ?? '']?.tint ?? 'var(--blob-lavender)'} 0%, var(--surface) 130%)` }}
-        />
+      <div className="card animate-slideup relative overflow-hidden">
+        {/* Full gradient banner instead of a flat tint fade */}
+        <div className="relative h-24" style={{ background: gradient }}>
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--surface)] via-transparent to-transparent" />
+        </div>
         <div className="-mt-12 flex flex-col items-center gap-3 px-8 pb-8 text-center">
           <CommunityEmblem type={c.type} />
           <div>
@@ -76,7 +80,7 @@ export default function CommunityDetailPage({ params }: { params: Promise<{ id: 
             <p className="mt-1 text-[14px] text-ink-soft">{glyph.sub}</p>
           </div>
           {typeof c.memberCount === 'number' && (
-            <p className="rounded-full bg-black/[0.035] px-3 py-1 font-mono text-[13px] text-ink-faint">
+            <p className="rounded-full px-3 py-1 font-mono text-[13px] text-ink-faint" style={{ background: 'var(--accent-soft)' }}>
               {c.memberCount} members
             </p>
           )}
@@ -127,8 +131,6 @@ export default function CommunityDetailPage({ params }: { params: Promise<{ id: 
   );
 }
 
-/** Rough shape guess — a row with an avatar and one line of text.
- *  Widen/adjust if PersonRow's real layout has more (e.g. a trailing button). */
 function PersonRowSkeleton() {
   return (
     <div className="flex items-center gap-3 py-3">
@@ -143,9 +145,9 @@ function DetailSkeleton() {
     <div className="flex flex-col gap-5">
       <div className="skeleton size-9 rounded-full" />
       <div className="card overflow-hidden">
-        <div className="skeleton h-20 rounded-none" />
+        <div className="skeleton h-24 rounded-none" />
         <div className="-mt-12 flex flex-col items-center gap-3 px-8 pb-8">
-          <div className="skeleton size-[84px] rounded-[28px] ring-4 ring-[var(--surface-raised)]" />
+          <div className="skeleton size-[88px] rounded-[28px] ring-4 ring-[var(--surface)]" />
           <div className="skeleton h-5 w-40 rounded" />
           <div className="skeleton h-3.5 w-28 rounded" />
         </div>

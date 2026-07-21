@@ -11,11 +11,30 @@ export interface MyProfile {
   visibility: 'PUBLIC' | 'FRIENDS_ONLY' | 'PRIVATE';
   showBirthYear: boolean;
   showAge: boolean;
+  showAnniversary: boolean;
   showLocation: boolean;
   showOnlineStatus: boolean;
   city: string | null;
   country: string | null;
+  anniversaryMonth: number | null;
+  anniversaryDay: number | null;
 }
+
+export interface UpdateProfileInput {
+  displayName?: string;
+  bio?: string | null;
+  city?: string | null;
+  country?: string | null;
+  anniversaryDate?: string | null;   
+  showAnniversary?: boolean;
+  visibility?: 'PUBLIC' | 'FRIENDS_ONLY' | 'PRIVATE';
+  showBirthYear?: boolean;
+  showAge?: boolean;
+  showLocation?: boolean;
+  showOnlineStatus?: boolean;
+  blobTint?: string;
+}
+
 
 export function useMyProfile() {
   return useQuery({
@@ -27,7 +46,7 @@ export function useMyProfile() {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<MyProfile>) =>
+    mutationFn: (body: UpdateProfileInput) =>   
       api<{ data: MyProfile }>('/profiles/me', { method: 'PATCH', body: JSON.stringify(body) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-profile'] });

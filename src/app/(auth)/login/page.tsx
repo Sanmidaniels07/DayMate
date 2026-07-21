@@ -2,29 +2,45 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useLogin } from '@/hooks/use-auth';
+import { useLogin, useResendOtp } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api';
 import { ThemeSwitcher } from './theme-switcher';
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useLogin();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const resend = useResendOtp();
+  const [form, setForm] = useState({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     login.mutate(form, { onSuccess: () => router.replace('/home') });
   };
+
+  const needsVerification =
+    login.error instanceof ApiError && login.error.status === 403;
   const errorMsg =
     login.error instanceof ApiError
-      ? login.error.status === 403
+      ? needsVerification
         ? 'Please verify your email first.'
         : login.error.message
       : null;
+
+  const identifierIsEmail = form.identifier.includes('@');
+
+  const goVerify = () => {
+    if (!identifierIsEmail) {
+      router.push('/verify');
+      return;
+    }
+    resend.mutate(form.identifier, {
+      onSettled: () => router.push(`/verify?email=${encodeURIComponent(form.identifier)}`),
+    });
+  };
 
   return (
     <div className="flex min-h-dvh items-center justify-center p-4">
@@ -37,8 +53,9 @@ export default function LoginPage() {
           <p className="mt-1 text-[15px] text-ink-soft">Your people are waiting.</p>
 
           <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
-            <Input label="Email" type="email" autoComplete="email" required
-              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input label="Email or phone number" type="text" autoComplete="username" required
+              placeholder="you@email.com or 080..."
+              value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} />
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="password" className="text-[13px] font-medium text-ink-soft">
@@ -67,7 +84,22 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {errorMsg && <p className="text-[13px] text-danger">{errorMsg}</p>}
+            {errorMsg && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[13px] text-danger">{errorMsg}</p>
+                {needsVerification && (
+                  <button
+                    type="button"
+                    onClick={goVerify}
+                    disabled={resend.isPending}
+                    className="flex items-center gap-1.5 self-start rounded-full bg-[var(--accent-soft)] px-4 py-2 text-[13px] font-semibold text-accent transition-colors hover:bg-accent/15 disabled:opacity-60"
+                  >
+                    {resend.isPending ? 'Sending a fresh code…' : 'Verify your email now'}
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
+            )}
             <Button type="submit" loading={login.isPending} className="mt-2 w-full">
               Log in
             </Button>

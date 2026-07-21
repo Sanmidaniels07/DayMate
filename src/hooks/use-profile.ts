@@ -1,5 +1,5 @@
 'use client';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export function useUsernameAvailable(username: string) {
@@ -36,5 +36,14 @@ export function useSetInterests() {
       api<{ data: unknown }>('/profiles/me/interests', {
         method: 'PUT', body: JSON.stringify({ interestIds }),
       }),
+  });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api('/profiles/me', { method: 'PATCH', body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me-profile'] }),
   });
 }

@@ -72,10 +72,14 @@ export function useUnfriend(username: string) {
 }
 
 export interface RequestRow {
-  id: string;
-  requester?: { profile: { username: string; displayName: string; avatarUrl: string | null; blobTint: string | null } | null };
-  addressee?: { profile: { username: string; displayName: string; avatarUrl: string | null; blobTint: string | null } | null };
-  createdAt: string;
+  requestId: string;
+  sentAt: string;
+  user: {
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+    blobTint: string | null;
+  };
 }
 
 export interface FriendRow {

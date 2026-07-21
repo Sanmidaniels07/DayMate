@@ -6,11 +6,7 @@ import { connectSocket } from '@/lib/socket';
 
 
 interface LoginResponse {
-  data: {
-    accessToken: string;
-    refreshToken?: string;   
-    user: { id: string; fullName: string; email: string; role: string };
-  };
+  data: { accessToken: string; refreshToken?: string; user: { id: string; fullName: string; email: string; role: string } };
 }
 
 export function useSignup() {
@@ -35,11 +31,20 @@ export function useVerifyEmail() {
 
 export function useLogin() {
   return useMutation({
-    mutationFn: (body: { email: string; password: string }) =>
+    mutationFn: (body: { identifier: string; password: string }) =>   
       api<LoginResponse>('/auth/login', { method: 'POST', skipAuth: true, body: JSON.stringify(body) }),
     onSuccess: (json) => {
       useSessionStore.getState().setSession(json.data.accessToken, json.data.user, json.data.refreshToken);
       connectSocket();
     },
+  });
+}
+
+export function useResendOtp() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      api<{ data: { email: string } }>('/auth/resend-otp', {
+        method: 'POST', skipAuth: true, body: JSON.stringify({ email }),
+      }),
   });
 }

@@ -1,51 +1,48 @@
-
 :root {
-  /* ---- Surfaces ---- */
-  --canvas: #ffffff;
-  /* now matches canvas per request — cards no longer separate by color
-     at all, only by border + shadow. See note below on --surface-raised. */
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --charcoal: #2e3a3e;
-  --charcoal-soft: #3a474c;
+  /* ---- Surfaces: a barely-blue world, not stark white ---- */
+  --canvas: #F5F8FF;          /* the page breathes pale blue, not clinical white */
+  --surface: #FFFFFF;
+  --surface-raised: #EFF4FF;
+  --charcoal: #16234F;        /* deep trust-navy — nav, hero, calls */
+  --charcoal-soft: #1F2E63;
 
   /* ---- Ink ---- */
-  --ink: #232b2e;
-  --ink-soft: #5b6a70;
-  /* darkened from #8b979c — that value only ever cleared ~2.7:1 against a
-     light background, which fails WCAG AA (4.5:1) for body text. It was
-     riding on the old tan/off-white canvas to look intentional; on pure
-     white the low contrast becomes the most visible thing on the page.
-     New value clears ~4.6:1. */
-  --ink-faint: #78868c;
-  --ink-on-dark: #f7f6f2;
+  --ink: #101833;
+  --ink-soft: #55607A;
+  --ink-faint: #7C86A0;
+  --ink-on-dark: #F5F8FF;
 
-  /* ---- The two-accent system ---- */
-  --accent: #4e6e7e;
-  --accent-hover: #43616f;
-  --accent-soft: #4e6e7e1a;
-  --celebrate: #e8a33d;
-  --celebrate-soft: #e8a33d24;
+  /* ---- Accent: trust blue, the everyday feeling ---- */
+  --accent: #3B6FEA;
+  --accent-hover: #2E5AD1;
+  --accent-soft: #3B6FEA1a;
 
-  /* ---- Blob tints, promoted to full voice ---- */
-  --blob-butter: #f2e8b3;
-  --blob-blush: #f4cdd4;
-  --blob-powder: #bcd7e8;
-  --blob-lavender: #ddd0f0;
-  --blob-sage: #cbe0c3;
-  --blob-peach: #f6d7bd;
+  /* ---- Celebrate: reserved ENTIRELY for occasion — never regular UI ---- */
+  --celebrate: #E8A33D;
+  --celebrate-soft: #E8A33D22;
 
-  --success: #5a8a6e;
-  --danger: #b3564f;
+  /* ---- Blob tints: warm pastels survive — they're the "people" color,
+     kept distinct from the blue "system" color so avatars still feel human ---- */
+  --blob-butter: #F2E8B3;
+  --blob-blush: #F4CDD4;
+  --blob-powder: #BCD7E8;
+  --blob-lavender: #DDD0F0;
+  --blob-sage: #CBE0C3;
+  --blob-peach: #F6D7BD;
 
-  /* strengthened again — was 0.09, now the border is 100% of what
-     separates a card from the page since color no longer helps at all */
-  --hairline: rgb(0 0 0 / 0.12);
-  --shadow-card: 0 1px 2px rgb(35 43 46 / 0.06), 0 10px 28px rgb(35 43 46 / 0.08);
-  --shadow-float: 0 2px 8px rgb(35 43 46 / 0.10), 0 18px 44px rgb(35 43 46 / 0.14);
-  --radius-card: 1.25rem;
+  --success: #2FA36B;
+  --danger: #E15252;
+
+  --hairline: rgb(22 35 79 / 0.08);
+  --shadow-card: 0 1px 2px rgb(22 35 79 / 0.05), 0 10px 28px rgb(22 35 79 / 0.07);
+  --shadow-float: 0 4px 16px rgb(22 35 79 / 0.10), 0 24px 56px rgb(59 111 234 / 0.14);
+  --glow-accent: 0 0 0 1px rgb(59 111 234 / 0.12), 0 8px 32px rgb(59 111 234 / 0.18);
+
+  /* ---- Radius: rounder, softer — a flat radius read cold against a warm system ---- */
+  --radius-card: 1.75rem;
   --radius-pill: 999px;
 
+  /* ---- Type scale ---- */
   --text-display: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
   --text-title: clamp(1.375rem, 1.1rem + 1.2vw, 1.75rem);
   --text-body: 0.9375rem;
