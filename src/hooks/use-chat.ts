@@ -33,6 +33,7 @@ export interface Message {
   createdAt: string;
   sender: { profile: { username: string; displayName: string; avatarUrl: string | null; blobTint: string | null } | null };
   replyTo?: { id: string; body: string | null; sender: { profile: { displayName: string } | null } } | null;
+  replyToStoryId?: string | null;
   pending?: boolean;
   failed?: boolean;
 }

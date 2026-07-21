@@ -392,6 +392,9 @@ function MessageRow({
   const msAge = Date.now() - new Date(message.createdAt).getTime();
   const withinEditWindow = msAge < EDIT_WINDOW_MS;
 
+  const isStoryReply = !!message.replyToStoryId;
+
+
   const canEdit = mine && isText && withinEditWindow && !message.pending && !message.failed;
   const canDelete = mine && !message.pending && !message.failed;
   const minutesLeft = Math.max(0, Math.ceil((EDIT_WINDOW_MS - msAge) / 60000));
@@ -416,6 +419,20 @@ function MessageRow({
 
   return (
     <div className={`relative mb-3 flex w-full flex-col ${mine ? "items-end" : "items-start"}`}>
+      
+       {isStoryReply && !message.deletedAt && (
+        <div className={`mb-1 flex items-center gap-1.5 px-1 text-[11px] ${mine ? "flex-row-reverse" : ""}`}>
+          <div className="grid size-4 place-items-center rounded-full"
+            style={{ background: 'linear-gradient(135deg, var(--celebrate), var(--accent))' }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+              <path d="M4 12 L20 4 L14 20 L11 13 L4 12 Z" />
+            </svg>
+          </div>
+          <span className="font-medium text-ink-faint">
+            {mine ? 'Replied to their story' : 'Replied to your story'}
+          </span>
+        </div>
+      )}
       <div className="flex w-full" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}>
         {message.deletedAt ? (
           <div className={`max-w-[70%] ${bubbleShape} bg-black/5 px-4 py-2 text-[14px] italic text-ink-faint`}>
