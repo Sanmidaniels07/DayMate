@@ -6,7 +6,7 @@ interface SessionUser {
   fullName: string;
   email: string;
   role: string;
-  username?: string;
+  username: string | null;
 }
 
 interface SessionState {

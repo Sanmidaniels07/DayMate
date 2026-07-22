@@ -1,14 +1,16 @@
-"use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { BlobAvatar } from "@/components/ui/blob-avatar";
 import { timeAgo } from "@/lib/time";
-import { useToggleReaction, type PostCard as Post } from "@/hooks/use-feed";
-import { Heart, MessageCircle, Cake, MoreHorizontal } from "lucide-react";
+import { useToggleReaction, useEditPost, useDeletePost, type PostCard as Post } from "@/hooks/use-feed";
+import { Heart, MessageCircle, Cake, MoreHorizontal, Check, X as XIcon } from "lucide-react";
 import Link from "next/link";
 import { ReportModal } from "@/components/features/report-modal";
 import { ReactionsDetail } from "@/components/features/reactions-detail";
+import { useSessionStore } from "@/stores/session";
+import { toast } from "@/components/ui/toast";
 import dynamic from 'next/dynamic';
+import { PostActionsMenu } from "./post-action-menu";
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
@@ -22,9 +24,38 @@ export function PostCard({ post }: { post: Post }) {
   const p = post.author.profile;
   const [reporting, setReporting] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState(post.body ?? '');
+
+  const editPost = useEditPost();
+  const deletePost = useDeletePost();
+  const myUsername = useSessionStore((s) => s.user?.username);
+  const isMine = !!myUsername && myUsername === p?.username;
+
   if (!p) return null;
 
-  const hasReacted = post._count.reactions > 0; 
+  const hasReacted = post._count.reactions > 0;
+
+  const saveEdit = () => {
+    const body = editBody.trim();
+    if (!body) return;
+    editPost.mutate({ postId: post.id, body }, {
+      onSuccess: () => { setEditing(false); toast.success('Post updated'); },
+      onError: () => toast.error('Could not update post'),
+    });
+  };
+
+  const confirmDelete = () => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    deletePost.mutate(post.id, {
+      onSuccess: () => toast.success('Post deleted'),
+      onError: () => toast.error('Could not delete post'),
+    });
+  };
+
+    const menuAnchorRef = useRef<HTMLButtonElement>(null);
+
 
   return (
     <article
@@ -53,16 +84,40 @@ export function PostCard({ post }: { post: Post }) {
           </p>
         </div>
         <button
-          onClick={() => setReporting(true)}
+          ref={menuAnchorRef}
+          onClick={() => setMenuOpen(true)}
           className="ml-auto grid size-8 place-items-center rounded-full text-ink-faint transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
-          aria-label="Report post"
+          aria-label="Post options"
         >
           <MoreHorizontal size={18} />
         </button>
       </div>
 
-      {post.body && (
-        <p className="whitespace-pre-wrap px-4 pb-3 text-[15px] leading-relaxed">{post.body}</p>
+      {editing ? (
+        <div className="px-4 pb-3">
+          <textarea
+            value={editBody}
+            onChange={(e) => setEditBody(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            autoFocus
+            className="w-full resize-none rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] px-3.5 py-2.5 text-[15px] leading-relaxed outline-none focus:border-accent"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button onClick={() => { setEditing(false); setEditBody(post.body ?? ''); }}
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium text-ink-soft hover:bg-[var(--surface-raised)]">
+              <XIcon size={14} /> Cancel
+            </button>
+            <button onClick={saveEdit} disabled={editPost.isPending || !editBody.trim()}
+              className="flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-2 text-[13px] font-semibold text-white disabled:opacity-50">
+              <Check size={14} /> {editPost.isPending ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        post.body && (
+          <p className="whitespace-pre-wrap px-4 pb-3 text-[15px] leading-relaxed">{post.body}</p>
+        )
       )}
 
       {post.media.length > 0 && <MediaGrid media={post.media} img={img} />}
@@ -112,12 +167,24 @@ export function PostCard({ post }: { post: Post }) {
         <div className="px-4 pb-2"><ReactionsDetail postId={post.id} /></div>
       )}
 
+      <PostActionsMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        isMine={isMine}
+        onEdit={() => setEditing(true)}
+        onDelete={confirmDelete}
+        onReport={() => setReporting(true)}
+        anchorRef={menuAnchorRef}
+      />
+
       {reporting && (
         <ReportModal targetType="POST" targetId={post.id} targetLabel="this post" onClose={() => setReporting(false)} />
       )}
     </article>
   );
 }
+
+// MediaGrid unchanged — keep as-is
 
 function MediaGrid({ media, img }: { media: { url: string }[]; img: (id: string, w?: number) => string }) {
   const shown = media.slice(0, 4);

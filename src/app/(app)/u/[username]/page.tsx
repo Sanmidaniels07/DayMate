@@ -12,12 +12,15 @@ import { ReportModal } from "@/components/features/report-modal";
 import { useProfile, useToggleFollow } from "@/hooks/use-social";
 import { usePresence } from "@/hooks/use-presence";
 import { useAuthorFeed } from "@/hooks/use-feed";
+import { useCoverUpload } from "@/hooks/use-cover-upload";
 import { PostCard } from "@/components/features/post-card";
 import { MONTHS } from "@/lib/months";
 import { timeAgo } from "@/lib/time";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/toast";
 import { Cake, MapPin, MoreHorizontal, MessageCircle, Camera, Loader2, BadgeCheck } from "lucide-react";
+
+const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD;
 
 function useBlock(username: string) {
   const qc = useQueryClient();
@@ -34,6 +37,7 @@ export default function ProfilePage({
 }) {
   const { username } = use(params);
   const router = useRouter();
+  const qc = useQueryClient();
   const { data, isLoading, error } = useProfile(username);
 
   const p = data?.data;
@@ -45,19 +49,20 @@ export default function ProfilePage({
   const [menuOpen, setMenuOpen] = useState(false);
   const block = useBlock(username);
 
-  // Cover photo — frontend-only for now (local preview, no persistence yet).
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [coverUploading, setCoverUploading] = useState(false);
+  // Cover photo — real upload, persisted via /profiles/me/cover/sign + /confirm.
+  const { upload: uploadCover, uploading: coverUploading } = useCoverUpload();
 
   const onCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setCoverUploading(true);
-    const url = URL.createObjectURL(file);
-    await new Promise((r) => setTimeout(r, 500));
-    setCoverPreview(url);
-    setCoverUploading(false);
-    toast.success("Cover photo updated");
+    const publicId = await uploadCover(file);
+    if (publicId) {
+      toast.success("Cover photo updated");
+      qc.invalidateQueries({ queryKey: ["profile", username] });
+    } else {
+      toast.error("Could not upload cover photo");
+    }
+    e.target.value = "";
   };
 
   if (isLoading) return <ProfileSkeleton />;
@@ -87,7 +92,14 @@ export default function ProfilePage({
     { label: "Circles", value: (p as any).communityCount ?? 0, color: "linear-gradient(135deg, var(--blob-lavender), #7C6FE0)" },
     { label: "Posts", value: (p as any).postCount ?? posts.length, color: "linear-gradient(135deg, var(--charcoal), var(--accent))" },
   ];
-  const hasCover = !!coverPreview;
+
+  // Real cover, read from the profile response (persists across reloads).
+  const coverUrl = (p as any).coverUrl as string | null | undefined;
+  const hasCover = !!coverUrl;
+  const coverSrc = hasCover
+    ? `https://res.cloudinary.com/${CLOUD}/image/upload/c_fill,w_1200,h_400,q_auto,f_auto/${coverUrl}`
+    : null;
+
   const isOnline = !p.isOwner ? presence.data?.data.online : undefined;
 
   return (
@@ -97,7 +109,7 @@ export default function ProfilePage({
         {/* ---- Cover — clips the image, does NOT contain the avatar ---- */}
         <div className="relative h-56 w-full overflow-hidden sm:h-64">
           {hasCover ? (
-            <img src={coverPreview!} alt="" className="size-full object-cover" />
+            <img src={coverSrc!} alt="" className="size-full object-cover" />
           ) : (
             <div
               className="size-full"
@@ -119,7 +131,6 @@ export default function ProfilePage({
 
         {/* ---- Avatar + content — a SIBLING of the cover, never clipped ---- */}
         <div className="relative px-5 sm:px-6">
-          {/* Avatar overlaps upward into the cover via negative top margin */}
           <div className="absolute -top-12 left-0 sm:-top-14 sm:left-0">
             <div className="relative">
               <div
@@ -152,7 +163,6 @@ export default function ProfilePage({
             </div>
           </div>
 
-          {/* Content — padded to clear the overlapping avatar */}
           <div className="pb-5 pt-16 sm:pt-[4.5rem]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
@@ -178,7 +188,6 @@ export default function ProfilePage({
                 )}
               </div>
 
-              {/* Stats */}
               <div className="flex shrink-0 gap-2">
                 {stats.map((s) => (
                   <div key={s.label} className="flex flex-col items-center gap-1">
@@ -194,7 +203,6 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Actions */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {p.isOwner ? (
                 <Button variant="ghost" onClick={() => router.push("/me/edit")}>
@@ -255,7 +263,6 @@ export default function ProfilePage({
               )}
             </div>
 
-            {/* Meta chips */}
             <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--hairline)] pt-4">
               <span className="flex items-center gap-1.5 rounded-full bg-[var(--celebrate-soft)] px-3 py-1.5 text-[13px] font-medium text-[#8a6410]">
                 <Cake size={14} />

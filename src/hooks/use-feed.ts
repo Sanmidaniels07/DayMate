@@ -157,3 +157,17 @@ export function usePostReactions(postId: string, enabled = false) {
     enabled: enabled && !!postId,
   });
 }
+
+export function useEditPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ postId, body }: { postId: string; body: string }) =>
+      api<{ data: PostCard }>(`/feed/posts/${postId}`, {
+        method: 'PATCH', body: JSON.stringify({ body }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+

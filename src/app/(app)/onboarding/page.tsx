@@ -118,11 +118,16 @@ function StepUsername({ onNext, defaultName }: { onNext: () => void; defaultName
   const submit = () => {
     setup.mutate(
       { username: debounced, displayName: displayName.trim() },
-      { onSuccess: onNext,
-        onError: (e) => { if (e instanceof ApiError && e.status === 409) setUsername(''); } },
+      {
+        onSuccess: (res) => {
+          useSessionStore.getState().setUsername(res.data.username);
+          onNext();
+        },
+        onError: (e) => { if (e instanceof ApiError && e.status === 409) setUsername(''); },
+      },
     );
   };
-
+  
   return (
     <StepShell eyebrow="Step 1 of 4" title="Claim your name" subtitle="This is how people find you.">
       <div className="flex flex-col gap-4">

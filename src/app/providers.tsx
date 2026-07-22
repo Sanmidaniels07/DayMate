@@ -11,6 +11,7 @@ interface SessionBootUser {
   fullName: string;
   email: string;
   role: string;
+  username: string | null;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -32,8 +33,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const booted = useRef(false);
 
   useEffect(() => {
-    // Strict Mode fires effects twice in dev — refresh once only, or the second
-    // call re-presents the just-rotated token and trips reuse-detection (401).
     if (booted.current) return;
     booted.current = true;
 
