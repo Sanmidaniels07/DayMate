@@ -31,7 +31,7 @@ export function PostActionsMenu({ open, onClose, isMine, onEdit, onDelete, onRep
         <>
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[140] bg-black/40 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-0"
+            className="fixed inset-0 z-[140] bg-opacity-25 backdrop-brightness-50 sm:bg-transparent sm:backdrop-blur-0"
             onClick={onClose}
           />
 
