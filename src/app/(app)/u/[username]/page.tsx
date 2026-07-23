@@ -3,22 +3,26 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { PresenceAvatar } from "@/components/ui/presence-avatar";
-import { getBlobTintVar } from "@/components/ui/blob-avatar";
+import { BlobAvatar, getBlobTintVar } from "@/components/ui/blob-avatar";
 import { Button } from "@/components/ui/button";
 import { RelationshipButton } from "@/components/features/relationship-button";
 import { ReportModal } from "@/components/features/report-modal";
-import { useProfile, useToggleFollow } from "@/hooks/use-social";
+import { useProfile, useToggleFollow, useFollowers, useFollowing } from "@/hooks/use-social";
 import { usePresence } from "@/hooks/use-presence";
 import { useAuthorFeed } from "@/hooks/use-feed";
 import { useCoverUpload } from "@/hooks/use-cover-upload";
 import { PostCard } from "@/components/features/post-card";
+import { PersonRow } from "@/components/features/person-row";
 import { MONTHS } from "@/lib/months";
 import { timeAgo } from "@/lib/time";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/toast";
-import { Cake, MapPin, MoreHorizontal, MessageCircle, Camera, Loader2, BadgeCheck } from "lucide-react";
+import {
+  ArrowLeft, Cake, MapPin, MoreHorizontal, MessageCircle, Camera, Loader2,
+  BadgeCheck, X, Heart, Repeat2, Users, Grid3x3, Lock,
+} from "lucide-react";
 
 const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD;
 
@@ -29,6 +33,14 @@ function useBlock(username: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
   });
 }
+
+const TABS = [
+  { key: "posts", label: "Posts", icon: Grid3x3 },
+  { key: "reposts", label: "Reposts", icon: Repeat2 },
+  { key: "following", label: "Following", icon: Users },
+  { key: "followers", label: "Followers", icon: Heart },
+] as const;
+type TabKey = typeof TABS[number]["key"];
 
 export default function ProfilePage({
   params,
@@ -43,13 +55,12 @@ export default function ProfilePage({
   const p = data?.data;
   const follow = useToggleFollow(username, p?.relationship?.isFollowing ?? false);
   const presence = usePresence(username, !p?.isOwner);
-  const timeline = useAuthorFeed(username);
-  const posts = timeline.data?.pages.flatMap((pg) => pg.data) ?? [];
   const [reporting, setReporting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState(false);
+  const [tab, setTab] = useState<TabKey>("posts");
   const block = useBlock(username);
 
-  // Cover photo — real upload, persisted via /profiles/me/cover/sign + /confirm.
   const { upload: uploadCover, uploading: coverUploading } = useCoverUpload();
 
   const onCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +74,14 @@ export default function ProfilePage({
       toast.error("Could not upload cover photo");
     }
     e.target.value = "";
+  };
+
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/discover");
+    }
   };
 
   if (isLoading) return <ProfileSkeleton />;
@@ -90,23 +109,36 @@ export default function ProfilePage({
   const stats = [
     { label: "Friends", value: (p as any).friendCount ?? 0, color: "linear-gradient(135deg, var(--blob-peach), #E8703D)" },
     { label: "Circles", value: (p as any).communityCount ?? 0, color: "linear-gradient(135deg, var(--blob-lavender), #7C6FE0)" },
-    { label: "Posts", value: (p as any).postCount ?? posts.length, color: "linear-gradient(135deg, var(--charcoal), var(--accent))" },
+    { label: "Posts", value: (p as any).postCount ?? 0, color: "linear-gradient(135deg, var(--charcoal), var(--accent))" },
   ];
 
-  // Real cover, read from the profile response (persists across reloads).
   const coverUrl = (p as any).coverUrl as string | null | undefined;
   const hasCover = !!coverUrl;
   const coverSrc = hasCover
     ? `https://res.cloudinary.com/${CLOUD}/image/upload/c_fill,w_1200,h_400,q_auto,f_auto/${coverUrl}`
     : null;
 
+  const avatarSrc = p.avatarUrl
+    ? `https://res.cloudinary.com/${CLOUD}/image/upload/c_limit,w_800/${p.avatarUrl}`
+    : null;
+
   const isOnline = !p.isOwner ? presence.data?.data.online : undefined;
+  const anniversaryMonth = (p as any).anniversaryMonth as number | null | undefined;
+  const anniversaryDay = (p as any).anniversaryDay as number | null | undefined;
+  const hasAnniversary = anniversaryMonth != null && anniversaryDay != null;
 
   return (
     <div className="flex flex-col gap-5">
+      <button
+        onClick={goBack}
+        aria-label="Go back"
+        className="grid size-10 w-fit place-items-center rounded-full bg-[var(--surface)] text-ink-soft shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
+      >
+        <ArrowLeft size={20} />
+      </button>
+
       {/* ---- Identity card ---- */}
       <div className="card overflow-hidden !p-0">
-        {/* ---- Cover — clips the image, does NOT contain the avatar ---- */}
         <div className="relative h-56 w-full overflow-hidden sm:h-64">
           {hasCover ? (
             <img src={coverSrc!} alt="" className="size-full object-cover" />
@@ -129,28 +161,33 @@ export default function ProfilePage({
           )}
         </div>
 
-        {/* ---- Avatar + content — a SIBLING of the cover, never clipped ---- */}
         <div className="relative px-5 sm:px-6">
           <div className="absolute -top-12 left-0 sm:-top-14 sm:left-0">
             <div className="relative">
-              <div
-                className="rounded-full p-[3.5px] shadow-[0_10px_28px_rgba(22,35,79,0.28)]"
-                style={{
-                  background: isOnline
-                    ? "conic-gradient(from 180deg, var(--celebrate), var(--accent), #7C6FE0, var(--celebrate))"
-                    : "linear-gradient(135deg, var(--accent), var(--charcoal))",
-                }}
+              <button
+                onClick={() => avatarSrc && setViewingPhoto(true)}
+                aria-label="View profile photo"
+                className="block rounded-full transition-transform active:scale-95"
               >
-                <div className="rounded-full bg-[var(--surface)] p-[3px]">
-                  <PresenceAvatar
-                    name={p.displayName}
-                    tint={p.blobTint}
-                    avatarUrl={p.avatarUrl}
-                    size={104}
-                    online={undefined}
-                  />
+                <div
+                  className="rounded-full p-[3.5px] shadow-[0_10px_28px_rgba(22,35,79,0.28)]"
+                  style={{
+                    background: isOnline
+                      ? "conic-gradient(from 180deg, var(--celebrate), var(--accent), #7C6FE0, var(--celebrate))"
+                      : "linear-gradient(135deg, var(--accent), var(--charcoal))",
+                  }}
+                >
+                  <div className="rounded-full bg-[var(--surface)] p-[3px]">
+                    <PresenceAvatar
+                      name={p.displayName}
+                      tint={p.blobTint}
+                      avatarUrl={p.avatarUrl}
+                      size={104}
+                      online={undefined}
+                    />
+                  </div>
                 </div>
-              </div>
+              </button>
               {isOnline && (
                 <span className="absolute bottom-2 left-1.5 size-4 rounded-full border-[3px] border-[var(--surface)] bg-[var(--success)] shadow-sm sm:size-[18px]" />
               )}
@@ -268,6 +305,12 @@ export default function ProfilePage({
                 <Cake size={14} />
                 {MONTHS[p.birthMonth - 1]} {p.birthDay}
               </span>
+              {hasAnniversary && (
+                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium" style={{ background: "#D4537E22", color: "#9c3a5a" }}>
+                  <Heart size={14} />
+                  {MONTHS[anniversaryMonth! - 1]} {anniversaryDay}
+                </span>
+              )}
               {p.city && (
                 <span className="flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[13px] font-medium text-accent">
                   <MapPin size={14} />
@@ -284,35 +327,79 @@ export default function ProfilePage({
         </div>
       </div>
 
-      {/* ---- Posts ---- */}
-      <div className="flex flex-col gap-3">
-        <h2 className="px-1 text-[12px] font-semibold uppercase tracking-wider text-ink-faint">
-          Posts
-        </h2>
-        {timeline.isLoading ? (
-          <div className="flex flex-col gap-3" aria-label="Loading posts" aria-busy="true">
-            <PostCardSkeleton />
-            <PostCardSkeleton />
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="card p-10 text-center text-[14px] text-ink-faint">
-            {p.isOwner ? "You haven't posted yet." : "No posts yet."}
-          </div>
-        ) : (
-          <>
-            {posts.map((post) => <PostCard key={post.id} post={post} />)}
-            {timeline.hasNextPage && (
+      {/* ---- Tabs ---- */}
+      <div className="card !p-0 overflow-hidden">
+        <div className="flex overflow-x-auto border-b border-[var(--hairline)]">
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
               <button
-                onClick={() => timeline.fetchNextPage()}
-                disabled={timeline.isFetchingNextPage}
-                className="card-interactive card mx-auto px-5 py-2.5 text-[13px] font-medium text-ink-soft transition-opacity disabled:opacity-60"
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`relative flex flex-1 items-center justify-center gap-1.5 px-4 py-3.5 text-[13px] font-semibold transition-colors ${
+                  active ? "text-accent" : "text-ink-faint hover:text-ink-soft"
+                }`}
               >
-                {timeline.isFetchingNextPage ? "Loading…" : "Load more"}
+                <t.icon size={15} />
+                <span className="hidden sm:inline">{t.label}</span>
+                {active && (
+                  <motion.span
+                    layoutId="profile-tab-underline"
+                    className="absolute inset-x-3 bottom-0 h-[2.5px] rounded-full"
+                    style={{ background: "linear-gradient(90deg, var(--accent), var(--charcoal))" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
               </button>
-            )}
-          </>
-        )}
+            );
+          })}
+        </div>
       </div>
+
+      {/* ---- Tab content ---- */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {tab === "posts" && <PostsTab username={username} isOwner={p.isOwner} />}
+          {tab === "reposts" && <RepostsTab />}
+          {tab === "following" && <FollowingTab username={username} />}
+          {tab === "followers" && <FollowersTab username={username} />}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* ---- Full-screen photo viewer ---- */}
+      <AnimatePresence>
+        {viewingPhoto && avatarSrc && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setViewingPhoto(false)}
+          >
+            <button
+              onClick={() => setViewingPhoto(false)}
+              aria-label="Close"
+              className="absolute right-5 top-5 z-10 grid size-10 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20"
+            >
+              <X size={20} />
+            </button>
+            <motion.img
+              src={avatarSrc}
+              alt={p.displayName}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="max-h-[80vh] max-w-[90vw] rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {reporting && (
         <ReportModal targetType="USER" targetId={p.username} targetLabel={`@${p.username}`}
@@ -322,9 +409,114 @@ export default function ProfilePage({
   );
 }
 
+function PostsTab({ username, isOwner }: { username: string; isOwner: boolean }) {
+  const timeline = useAuthorFeed(username);
+  const posts = timeline.data?.pages.flatMap((pg) => pg.data) ?? [];
+
+  return (
+    <div className="flex flex-col gap-3">
+      {timeline.isLoading ? (
+        <div className="flex flex-col gap-3" aria-label="Loading posts" aria-busy="true">
+          <PostCardSkeleton />
+          <PostCardSkeleton />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="card p-10 text-center text-[14px] text-ink-faint">
+          {isOwner ? "You haven't posted yet." : "No posts yet."}
+        </div>
+      ) : (
+        <>
+          {posts.map((post) => <PostCard key={post.id} post={post} />)}
+          {timeline.hasNextPage && (
+            <button
+              onClick={() => timeline.fetchNextPage()}
+              disabled={timeline.isFetchingNextPage}
+              className="card-interactive card mx-auto px-5 py-2.5 text-[13px] font-medium text-ink-soft transition-opacity disabled:opacity-60"
+            >
+              {timeline.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function RepostsTab() {
+  return (
+    <div className="card flex flex-col items-center gap-2 p-10 text-center">
+      <div className="grid size-12 place-items-center rounded-2xl" style={{ background: "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))" }}>
+        <Repeat2 size={22} className="text-accent" />
+      </div>
+      <p className="text-[14px] font-medium">Reposts coming soon</p>
+      <p className="max-w-xs text-[13px] text-ink-soft">This is where shared posts will show up.</p>
+    </div>
+  );
+}
+
+function FollowingTab({ username }: { username: string }) {
+  const { data, isLoading, error } = useFollowing(username);
+  const rows = data?.data ?? [];
+
+  if (isLoading) return <ListSkeleton />;
+  if (error) return <PrivateNetworkState />;
+  if (rows.length === 0) return <EmptyList text="Not following anyone yet." />;
+  return (
+    <div className="card divide-y divide-[var(--hairline)] px-2 sm:px-3">
+      {rows.map((u) => <div key={u.username} className="px-2"><PersonRow {...u} /></div>)}
+    </div>
+  );
+}
+
+function FollowersTab({ username }: { username: string }) {
+  const { data, isLoading, error } = useFollowers(username);
+  const rows = data?.data ?? [];
+
+  if (isLoading) return <ListSkeleton />;
+  if (error) return <PrivateNetworkState />;
+  if (rows.length === 0) return <EmptyList text="No followers yet." />;
+  return (
+    <div className="card divide-y divide-[var(--hairline)] px-2 sm:px-3">
+      {rows.map((u) => <div key={u.username} className="px-2"><PersonRow {...u} /></div>)}
+    </div>
+  );
+}
+
+function PrivateNetworkState() {
+  return (
+    <div className="card flex flex-col items-center gap-2 p-10 text-center">
+      <div className="grid size-12 place-items-center rounded-2xl"
+        style={{ background: "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))" }}>
+        <Lock size={22} className="text-accent" />
+      </div>
+      <p className="text-[14px] font-medium">This isn&apos;t visible to you</p>
+      <p className="max-w-xs text-[13px] text-ink-soft">
+        Only friends can see this person&apos;s network.
+      </p>
+    </div>
+  );
+}
+
+function EmptyList({ text }: { text: string }) {
+  return <div className="card p-10 text-center text-[14px] text-ink-faint">{text}</div>;
+}
+function ListSkeleton() {
+  return (
+    <div className="card flex flex-col divide-y divide-[var(--hairline)] px-3">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="flex items-center gap-3 py-3">
+          <div className="skeleton size-11 shrink-0 rounded-full" />
+          <div className="skeleton h-4 w-32 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProfileSkeleton() {
   return (
     <div className="flex flex-col gap-5">
+      <div className="skeleton size-10 rounded-full" />
       <div className="card overflow-hidden !p-0">
         <div className="skeleton h-56 rounded-none sm:h-64" />
         <div className="px-5 pb-5 pt-16 sm:px-6">

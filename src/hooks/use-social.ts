@@ -108,16 +108,19 @@ export function useFriends() {
     queryFn: () => api<{ data: FriendRow[] }>('/social/friends'),
   });
 }
-export function useFollowers() {
+
+export function useFollowers(username?: string) {
   return useQuery({
-    queryKey: ['followers'],
-    queryFn: () => api<{ data: FriendRow[] }>('/social/followers'),
+    queryKey: ['followers', username ?? 'me'],
+    queryFn: () => api<{ data: FriendRow[] }>(`/social/followers${username ? `?username=${username}` : ''}`),
+    retry: false,
   });
 }
-export function useFollowing() {
+export function useFollowing(username?: string) {
   return useQuery({
-    queryKey: ['following'],
-    queryFn: () => api<{ data: FriendRow[] }>('/social/following'),
+    queryKey: ['following', username ?? 'me'],
+    queryFn: () => api<{ data: FriendRow[] }>(`/social/following${username ? `?username=${username}` : ''}`),
+    retry: false,
   });
 }
 

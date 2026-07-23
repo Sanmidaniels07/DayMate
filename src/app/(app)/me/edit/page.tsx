@@ -2,20 +2,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Check, MapPin, Loader2, Heart } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BlobAvatar } from "@/components/ui/blob-avatar";
 import { Toggle } from "@/components/ui/toggle";
 import { useMyProfile, useUpdateProfile } from "@/hooks/use-settings";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
+import { toast } from "@/components/ui/toast";
 
 type Form = {
   displayName: string;
   bio: string;
   city: string;
   country: string;
-  anniversaryDate: string;      // "" = none / cleared
+  anniversaryDate: string;
   showAnniversary: boolean;
 };
 
@@ -24,6 +24,15 @@ export default function EditProfilePage() {
   const update = useUpdateProfile();
   const { upload, uploading } = useAvatarUpload();
   const router = useRouter();
+
+  
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/settings");
+    }
+  };
 
   const blank: Form = {
     displayName: "", bio: "", city: "", country: "",
@@ -36,7 +45,6 @@ export default function EditProfilePage() {
   useEffect(() => {
     if (data) {
       const d = data.data;
-    
       const anniversaryDate =
         d.anniversaryMonth && d.anniversaryDay
           ? `2000-${String(d.anniversaryMonth).padStart(2, "0")}-${String(d.anniversaryDay).padStart(2, "0")}`
@@ -71,13 +79,13 @@ export default function EditProfilePage() {
     update.mutate(
       {
         ...rest,
-        
         anniversaryDate: anniversaryDate ? anniversaryDate : null,
       },
       {
         onSuccess: () => {
           setOriginal(form);
           setSaved(true);
+          toast.success("Profile updated");
           setTimeout(() => setSaved(false), 2000);
         },
       },
@@ -94,12 +102,13 @@ export default function EditProfilePage() {
       {/* Sticky header */}
       <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--hairline)] bg-[var(--surface)]/80 px-4 py-3.5 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <Link
-            href="/settings"
+          <button
+            onClick={goBack}
+            aria-label="Go back"
             className="grid size-9 place-items-center rounded-full text-ink transition-colors hover:bg-[var(--surface-raised)] active:scale-95"
           >
             <ArrowLeft size={20} />
-          </Link>
+          </button>
           <h1 className="font-display text-[17px] font-semibold tracking-tight">
             Edit profile
           </h1>
