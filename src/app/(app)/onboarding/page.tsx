@@ -33,12 +33,15 @@ export default function OnboardingPage() {
       <div className="flex items-center justify-center gap-2">
         {STEPS.map((label, i) => {
           const n = i + 1;
+          const filled = n <= step;
           return (
             <div key={label} className="flex flex-1 flex-col items-center gap-1.5">
               <motion.span
-                className={`h-1.5 w-full rounded-full ${
-                  n === step ? 'bg-accent' : n < step ? 'bg-accent/50' : 'bg-black/10'
-                }`}
+                className="h-1.5 w-full rounded-full bg-black/10"
+                style={filled ? {
+                  background: 'linear-gradient(135deg, var(--accent), var(--charcoal))',
+                  opacity: n < step ? 0.5 : 1,
+                } : undefined}
                 layout transition={{ duration: 0.3 }}
               />
               <span className={`text-[10px] font-medium uppercase tracking-wide ${

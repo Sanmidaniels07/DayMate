@@ -31,7 +31,7 @@ export function useCoverUpload() {
 
       await api('/profiles/me/cover/confirm', {
         method: 'POST',
-        body: JSON.stringify({ publicId: cloud.public_id }),
+        body: JSON.stringify({ publicId: cloud.public_id, version: cloud.version }),
       });
 
       return cloud.public_id as string;

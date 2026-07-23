@@ -141,7 +141,7 @@ export default function ProfilePage({
       <div className="card overflow-hidden !p-0">
         <div className="relative h-56 w-full overflow-hidden sm:h-64">
           {hasCover ? (
-            <img src={coverSrc!} alt="" className="size-full object-cover" />
+            <img key={coverSrc} src={coverSrc!} alt="" className="size-full object-cover" />
           ) : (
             <div
               className="size-full"
