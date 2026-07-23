@@ -30,12 +30,12 @@ function NavIconLink({
       <Link
         href={href}
         aria-label={label}
-        className={`grid size-10 place-items-center rounded-full transition-colors ${
+        className={`grid size-9 shrink-0 place-items-center rounded-full transition-colors sm:size-10 ${
           active ? 'bg-[var(--accent-soft)] text-accent' : 'text-ink-soft hover:bg-[var(--accent-soft)] hover:text-accent'
         }`}
       >
         <div className="relative">
-          <Icon size={20} strokeWidth={active ? 2.4 : 2} />
+          <Icon size={18} strokeWidth={active ? 2.4 : 2} className="sm:size-5" />
           {!!badge && badge > 0 && (
             <span className="absolute -right-1.5 -top-1.5 grid min-w-4 place-items-center rounded-full bg-celebrate px-1 text-[9px] font-bold text-[#3a2c10]">
               {badge > 9 ? '9+' : badge}
@@ -48,7 +48,6 @@ function NavIconLink({
   );
 }
 
-/** Same hover-tooltip visual as NavIconLink, but a plain button — for actions, not routes. */
 function NavIconButton({
   label, icon: Icon, onClick, danger,
 }: { label: string; icon: typeof Bell; onClick: () => void; danger?: boolean }) {
@@ -58,11 +57,11 @@ function NavIconButton({
       <button
         onClick={onClick}
         aria-label={label}
-        className={`grid size-10 place-items-center rounded-full text-ink-soft transition-colors ${
+        className={`grid size-9 shrink-0 place-items-center rounded-full text-ink-soft transition-colors sm:size-10 ${
           danger ? 'hover:bg-[var(--danger)]/10 hover:text-danger' : 'hover:bg-[var(--accent-soft)] hover:text-accent'
         }`}
       >
-        <Icon size={20} />
+        <Icon size={18} className="sm:size-5" />
       </button>
       <NavTooltip show={hovered} label={label} />
     </div>
@@ -70,6 +69,8 @@ function NavIconButton({
 }
 
 function NavTooltip({ show, label }: { show: boolean; label: string }) {
+  // Tooltips are a hover affordance — meaningless (and just extra DOM) on touch,
+  // so only render them on pointer devices, and only once actually hovered.
   return (
     <AnimatePresence>
       {show && (
@@ -78,7 +79,7 @@ function NavTooltip({ show, label }: { show: boolean; label: string }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -4, scale: 0.95 }}
           transition={{ duration: 0.15 }}
-          className="pointer-events-none absolute right-1/2 top-full z-40 mt-2 translate-x-1/2 whitespace-nowrap rounded-full bg-charcoal px-3 py-1.5 text-[12px] font-medium text-white shadow-[var(--shadow-float)]"
+          className="pointer-events-none absolute right-1/2 top-full z-40 mt-2 hidden translate-x-1/2 whitespace-nowrap rounded-full bg-charcoal px-3 py-1.5 text-[12px] font-medium text-white shadow-[var(--shadow-float)] sm:block"
         >
           {label}
           <span className="absolute -top-1 right-1/2 size-2 translate-x-1/2 rotate-45 bg-charcoal" />
@@ -112,10 +113,10 @@ export function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--hairline)] bg-surface/85 px-4 py-2.5 backdrop-blur-md lg:px-8">
-        <Link href="/home" className="flex items-center gap-3">
-          <span className="relative grid size-10 place-items-center rounded-2xl bg-charcoal">
-            <svg width="26" height="26" viewBox="0 0 44 44" fill="none" aria-hidden>
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-[var(--hairline)] bg-surface/85 px-3 py-2.5 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-8">
+        <Link href="/home" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <span className="relative grid size-9 shrink-0 place-items-center rounded-2xl bg-charcoal sm:size-10">
+            <svg width="22" height="22" viewBox="0 0 44 44" fill="none" aria-hidden className="sm:h-[26px] sm:w-[26px]">
               <motion.circle
                 cx="22" cy="22" r="20" fill="none" stroke="var(--celebrate)" strokeWidth="2.5"
                 strokeLinecap="round" strokeDasharray="126"
@@ -143,11 +144,12 @@ export function TopNav() {
             </svg>
           </span>
 
-          <span className="flex flex-col leading-none">
-            <span className="font-display text-[21px] font-semibold tracking-[-0.02em]">
+          <span className="flex min-w-0 flex-col leading-none">
+            <span className="font-display text-[17px] font-semibold tracking-[-0.02em] sm:text-[21px]">
               Day<span className="italic text-celebrate">Mate</span>
             </span>
-            <span className="relative mt-0.5 block h-4 min-w-[220px] overflow-hidden">
+            {/* Tagline: hidden below sm — the thing most likely to force overflow */}
+            <span className="relative mt-0.5 hidden h-4 min-w-[220px] overflow-hidden sm:block">
               <motion.span
                 key={line}
                 initial={{ opacity: 0, y: 6 }}
@@ -161,10 +163,10 @@ export function TopNav() {
           </span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
           <NavIconLink href="/notifications" label="Notifications" icon={Bell} badge={alertCount} />
           <NavIconLink href="/connections" label="Connections" icon={Users} />
-          <div className="mx-1 h-6 w-px bg-[var(--hairline)]" />
+          <div className="mx-0.5 h-6 w-px bg-[var(--hairline)] sm:mx-1" />
           <NavIconButton label="Log out" icon={LogOut} danger onClick={() => setConfirmLogout(true)} />
         </div>
       </header>
