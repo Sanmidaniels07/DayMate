@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { PresenceAvatar } from "@/components/ui/presence-avatar";
-import { BlobAvatar, getBlobTintVar } from "@/components/ui/blob-avatar";
+import { BlobAvatar, buildCloudinarySrc, getBlobTintVar } from "@/components/ui/blob-avatar";
 import { Button } from "@/components/ui/button";
 import { RelationshipButton } from "@/components/features/relationship-button";
 import { ReportModal } from "@/components/features/report-modal";
-import { useProfile, useToggleFollow, useFollowers, useFollowing } from "@/hooks/use-social";
+import {
+  useProfile,
+  useToggleFollow,
+  useFollowers,
+  useFollowing,
+} from "@/hooks/use-social";
 import { usePresence } from "@/hooks/use-presence";
 import { useAuthorFeed } from "@/hooks/use-feed";
 import { useCoverUpload } from "@/hooks/use-cover-upload";
@@ -20,11 +25,29 @@ import { timeAgo } from "@/lib/time";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/toast";
 import {
-  ArrowLeft, Cake, MapPin, MoreHorizontal, MessageCircle, Camera, Loader2,
-  BadgeCheck, X, Heart, Repeat2, Users, Grid3x3, Lock,
+  ArrowLeft,
+  Cake,
+  MapPin,
+  MoreHorizontal,
+  MessageCircle,
+  Camera,
+  Loader2,
+  BadgeCheck,
+  X,
+  Heart,
+  Repeat2,
+  Users,
+  Grid3x3,
+  Lock,
 } from "lucide-react";
 
 const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD;
+
+function buildCoverSrc(coverUrl: string, cloud: string) {
+  const [publicId, query] = coverUrl.split("?v=");
+  const versionSegment = query ? `v${query}/` : "";
+  return `https://res.cloudinary.com/${cloud}/image/upload/c_fill,w_1200,h_400,q_auto,f_auto/${versionSegment}${publicId}`;
+}
 
 function useBlock(username: string) {
   const qc = useQueryClient();
@@ -40,7 +63,7 @@ const TABS = [
   { key: "following", label: "Following", icon: Users },
   { key: "followers", label: "Followers", icon: Heart },
 ] as const;
-type TabKey = typeof TABS[number]["key"];
+type TabKey = (typeof TABS)[number]["key"];
 
 export default function ProfilePage({
   params,
@@ -53,7 +76,10 @@ export default function ProfilePage({
   const { data, isLoading, error } = useProfile(username);
 
   const p = data?.data;
-  const follow = useToggleFollow(username, p?.relationship?.isFollowing ?? false);
+  const follow = useToggleFollow(
+    username,
+    p?.relationship?.isFollowing ?? false,
+  );
   const presence = usePresence(username, !p?.isOwner);
   const [reporting, setReporting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -93,13 +119,17 @@ export default function ProfilePage({
           <MapPin size={24} />
         </div>
         <div>
-          <p className="text-[15px] font-semibold">This profile isn&apos;t available</p>
+          <p className="text-[15px] font-semibold">
+            This profile isn&apos;t available
+          </p>
           <p className="mt-1 max-w-xs text-[13px] text-ink-faint">
             It may have been removed, or the username might be wrong.
           </p>
         </div>
-        <Link href="/discover"
-          className="mt-1 rounded-full bg-accent px-5 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-95">
+        <Link
+          href="/discover"
+          className="mt-1 rounded-full bg-accent px-5 py-2.5 text-[13px] font-semibold text-white transition-transform active:scale-95"
+        >
           Back to Discover
         </Link>
       </div>
@@ -107,23 +137,35 @@ export default function ProfilePage({
   }
 
   const stats = [
-    { label: "Friends", value: (p as any).friendCount ?? 0, color: "linear-gradient(135deg, var(--blob-peach), #E8703D)" },
-    { label: "Circles", value: (p as any).communityCount ?? 0, color: "linear-gradient(135deg, var(--blob-lavender), #7C6FE0)" },
-    { label: "Posts", value: (p as any).postCount ?? 0, color: "linear-gradient(135deg, var(--charcoal), var(--accent))" },
+    {
+      label: "Friends",
+      value: (p as any).friendCount ?? 0,
+      color: "linear-gradient(135deg, var(--blob-peach), #E8703D)",
+    },
+    {
+      label: "Circles",
+      value: (p as any).communityCount ?? 0,
+      color: "linear-gradient(135deg, var(--blob-lavender), #7C6FE0)",
+    },
+    {
+      label: "Posts",
+      value: (p as any).postCount ?? 0,
+      color: "linear-gradient(135deg, var(--charcoal), var(--accent))",
+    },
   ];
 
   const coverUrl = (p as any).coverUrl as string | null | undefined;
   const hasCover = !!coverUrl;
-  const coverSrc = hasCover
-    ? `https://res.cloudinary.com/${CLOUD}/image/upload/c_fill,w_1200,h_400,q_auto,f_auto/${coverUrl}`
-    : null;
+  const coverSrc = hasCover && CLOUD ? buildCoverSrc(coverUrl!, CLOUD) : null;
 
-  const avatarSrc = p.avatarUrl
-    ? `https://res.cloudinary.com/${CLOUD}/image/upload/c_limit,w_800/${p.avatarUrl}`
-    : null;
+  const avatarSrc =
+    p.avatarUrl && CLOUD ? buildCloudinarySrc(p.avatarUrl, CLOUD, 400) : null;
 
   const isOnline = !p.isOwner ? presence.data?.data.online : undefined;
-  const anniversaryMonth = (p as any).anniversaryMonth as number | null | undefined;
+  const anniversaryMonth = (p as any).anniversaryMonth as
+    | number
+    | null
+    | undefined;
   const anniversaryDay = (p as any).anniversaryDay as number | null | undefined;
   const hasAnniversary = anniversaryMonth != null && anniversaryDay != null;
 
@@ -141,7 +183,12 @@ export default function ProfilePage({
       <div className="card overflow-hidden !p-0">
         <div className="relative h-56 w-full overflow-hidden sm:h-64">
           {hasCover ? (
-            <img key={coverSrc} src={coverSrc!} alt="" className="size-full object-cover" />
+            <img
+              key={coverSrc}
+              src={coverSrc!}
+              alt=""
+              className="size-full object-cover"
+            />
           ) : (
             <div
               className="size-full"
@@ -154,9 +201,23 @@ export default function ProfilePage({
 
           {p.isOwner && (
             <label className="absolute right-4 top-4 z-20 flex cursor-pointer items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-[13px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/55">
-              {coverUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
-              {coverUploading ? "Uploading…" : hasCover ? "Edit cover" : "Add cover"}
-              <input type="file" accept="image/*" className="hidden" onChange={onCoverFile} disabled={coverUploading} />
+              {coverUploading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Camera size={14} />
+              )}
+              {coverUploading
+                ? "Uploading…"
+                : hasCover
+                  ? "Edit cover"
+                  : "Add cover"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onCoverFile}
+                disabled={coverUploading}
+              />
             </label>
           )}
         </div>
@@ -192,8 +253,13 @@ export default function ProfilePage({
                 <span className="absolute bottom-2 left-1.5 size-4 rounded-full border-[3px] border-[var(--surface)] bg-[var(--success)] shadow-sm sm:size-[18px]" />
               )}
               {p.relationship?.isFriend && (
-                <span className="absolute -right-0.5 bottom-1 grid size-7 place-items-center rounded-full border-[3px] border-[var(--surface)] shadow-sm"
-                  style={{ background: "linear-gradient(135deg, var(--accent), var(--charcoal))" }}>
+                <span
+                  className="absolute -right-0.5 bottom-1 grid size-7 place-items-center rounded-full border-[3px] border-[var(--surface)] shadow-sm"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--accent), var(--charcoal))",
+                  }}
+                >
                   <BadgeCheck size={13} className="text-white" />
                 </span>
               )}
@@ -207,34 +273,50 @@ export default function ProfilePage({
                   <h1 className="font-display text-[24px] font-semibold italic leading-tight tracking-tight">
                     {p.displayName}
                   </h1>
-                  {p.relationship?.isFriend && <BadgeCheck size={18} className="text-accent" />}
+                  {p.relationship?.isFriend && (
+                    <BadgeCheck size={18} className="text-accent" />
+                  )}
                 </div>
-                <p className="text-[14px] font-medium text-accent">@{p.username}</p>
+                <p className="text-[14px] font-medium text-accent">
+                  @{p.username}
+                </p>
 
-                {!p.isOwner && presence.data?.data && !isOnline && presence.data.data.lastSeenAt && (
-                  <p className="mt-0.5 text-[12px] text-ink-faint">
-                    Last seen {timeAgo(presence.data.data.lastSeenAt)}
-                  </p>
-                )}
+                {!p.isOwner &&
+                  presence.data?.data &&
+                  !isOnline &&
+                  presence.data.data.lastSeenAt && (
+                    <p className="mt-0.5 text-[12px] text-ink-faint">
+                      Last seen {timeAgo(presence.data.data.lastSeenAt)}
+                    </p>
+                  )}
                 {isOnline && (
-                  <p className="mt-0.5 text-[12px] font-medium text-[var(--success)]">● Online now</p>
+                  <p className="mt-0.5 text-[12px] font-medium text-[var(--success)]">
+                    ● Online now
+                  </p>
                 )}
 
                 {p.bio && (
-                  <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-ink-soft">{p.bio}</p>
+                  <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-ink-soft">
+                    {p.bio}
+                  </p>
                 )}
               </div>
 
               <div className="flex shrink-0 gap-2">
                 {stats.map((s) => (
-                  <div key={s.label} className="flex flex-col items-center gap-1">
+                  <div
+                    key={s.label}
+                    className="flex flex-col items-center gap-1"
+                  >
                     <div
                       className="grid size-11 place-items-center rounded-full text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(22,35,79,0.18)]"
                       style={{ background: s.color }}
                     >
                       {s.value}
                     </div>
-                    <span className="text-[10px] text-ink-faint">{s.label}</span>
+                    <span className="text-[10px] text-ink-faint">
+                      {s.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -247,21 +329,33 @@ export default function ProfilePage({
                 </Button>
               ) : (
                 <>
-                  <motion.button whileTap={{ scale: 0.96 }}
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
                     onClick={() => follow.mutate()}
                     disabled={follow.isPending}
                     className={`rounded-full px-4 py-2 text-[14px] font-semibold shadow-sm transition-opacity ${
-                      p.relationship?.isFollowing ? "border border-[var(--hairline)] text-ink" : "text-white"
+                      p.relationship?.isFollowing
+                        ? "border border-[var(--hairline)] text-ink"
+                        : "text-white"
                     }`}
-                    style={!p.relationship?.isFollowing ? { background: "linear-gradient(135deg, var(--accent), var(--charcoal))" } : undefined}
+                    style={
+                      !p.relationship?.isFollowing
+                        ? {
+                            background:
+                              "linear-gradient(135deg, var(--accent), var(--charcoal))",
+                          }
+                        : undefined
+                    }
                   >
                     {p.relationship?.isFollowing ? "Following" : "Follow"}
                   </motion.button>
                   <RelationshipButton profile={p} />
                   {p.relationship?.isFriend && (
-                    <Link href={`/chat?with=${p.username}`}
+                    <Link
+                      href={`/chat?with=${p.username}`}
                       className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
-                      aria-label="Message">
+                      aria-label="Message"
+                    >
                       <MessageCircle size={18} />
                     </Link>
                   )}
@@ -275,10 +369,16 @@ export default function ProfilePage({
                     </button>
                     {menuOpen && (
                       <>
-                        <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setMenuOpen(false)}
+                        />
                         <div className="absolute right-0 top-11 z-20 w-44 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-float)]">
                           <button
-                            onClick={() => { setMenuOpen(false); setReporting(true); }}
+                            onClick={() => {
+                              setMenuOpen(false);
+                              setReporting(true);
+                            }}
                             className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] hover:bg-[var(--accent-soft)]"
                           >
                             Report @{p.username}
@@ -286,7 +386,10 @@ export default function ProfilePage({
                           <button
                             onClick={() => {
                               setMenuOpen(false);
-                              block.mutate(undefined, { onSuccess: () => toast.success(`Blocked @${p.username}`) });
+                              block.mutate(undefined, {
+                                onSuccess: () =>
+                                  toast.success(`Blocked @${p.username}`),
+                              });
                             }}
                             className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] text-danger hover:bg-[var(--danger)]/5"
                           >
@@ -306,7 +409,10 @@ export default function ProfilePage({
                 {MONTHS[p.birthMonth - 1]} {p.birthDay}
               </span>
               {hasAnniversary && (
-                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium" style={{ background: "#D4537E22", color: "#9c3a5a" }}>
+                <span
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium"
+                  style={{ background: "#D4537E22", color: "#9c3a5a" }}
+                >
                   <Heart size={14} />
                   {MONTHS[anniversaryMonth! - 1]} {anniversaryDay}
                 </span>
@@ -314,7 +420,8 @@ export default function ProfilePage({
               {p.city && (
                 <span className="flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[13px] font-medium text-accent">
                   <MapPin size={14} />
-                  {p.city}{p.country ? `, ${p.country}` : ""}
+                  {p.city}
+                  {p.country ? `, ${p.country}` : ""}
                 </span>
               )}
               {p.ageBracket && (
@@ -346,7 +453,10 @@ export default function ProfilePage({
                   <motion.span
                     layoutId="profile-tab-underline"
                     className="absolute inset-x-3 bottom-0 h-[2.5px] rounded-full"
-                    style={{ background: "linear-gradient(90deg, var(--accent), var(--charcoal))" }}
+                    style={{
+                      background:
+                        "linear-gradient(90deg, var(--accent), var(--charcoal))",
+                    }}
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
@@ -365,7 +475,9 @@ export default function ProfilePage({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {tab === "posts" && <PostsTab username={username} isOwner={p.isOwner} />}
+          {tab === "posts" && (
+            <PostsTab username={username} isOwner={p.isOwner} />
+          )}
           {tab === "reposts" && <RepostsTab />}
           {tab === "following" && <FollowingTab username={username} />}
           {tab === "followers" && <FollowersTab username={username} />}
@@ -376,7 +488,9 @@ export default function ProfilePage({
       <AnimatePresence>
         {viewingPhoto && avatarSrc && (
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 backdrop-blur-sm"
             onClick={() => setViewingPhoto(false)}
           >
@@ -402,21 +516,35 @@ export default function ProfilePage({
       </AnimatePresence>
 
       {reporting && (
-        <ReportModal targetType="USER" targetId={p.username} targetLabel={`@${p.username}`}
-          onClose={() => setReporting(false)} />
+        <ReportModal
+          targetType="USER"
+          targetId={p.username}
+          targetLabel={`@${p.username}`}
+          onClose={() => setReporting(false)}
+        />
       )}
     </div>
   );
 }
 
-function PostsTab({ username, isOwner }: { username: string; isOwner: boolean }) {
+function PostsTab({
+  username,
+  isOwner,
+}: {
+  username: string;
+  isOwner: boolean;
+}) {
   const timeline = useAuthorFeed(username);
   const posts = timeline.data?.pages.flatMap((pg) => pg.data) ?? [];
 
   return (
     <div className="flex flex-col gap-3">
       {timeline.isLoading ? (
-        <div className="flex flex-col gap-3" aria-label="Loading posts" aria-busy="true">
+        <div
+          className="flex flex-col gap-3"
+          aria-label="Loading posts"
+          aria-busy="true"
+        >
           <PostCardSkeleton />
           <PostCardSkeleton />
         </div>
@@ -426,7 +554,9 @@ function PostsTab({ username, isOwner }: { username: string; isOwner: boolean })
         </div>
       ) : (
         <>
-          {posts.map((post) => <PostCard key={post.id} post={post} />)}
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
           {timeline.hasNextPage && (
             <button
               onClick={() => timeline.fetchNextPage()}
@@ -445,11 +575,19 @@ function PostsTab({ username, isOwner }: { username: string; isOwner: boolean })
 function RepostsTab() {
   return (
     <div className="card flex flex-col items-center gap-2 p-10 text-center">
-      <div className="grid size-12 place-items-center rounded-2xl" style={{ background: "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))" }}>
+      <div
+        className="grid size-12 place-items-center rounded-2xl"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))",
+        }}
+      >
         <Repeat2 size={22} className="text-accent" />
       </div>
       <p className="text-[14px] font-medium">Reposts coming soon</p>
-      <p className="max-w-xs text-[13px] text-ink-soft">This is where shared posts will show up.</p>
+      <p className="max-w-xs text-[13px] text-ink-soft">
+        This is where shared posts will show up.
+      </p>
     </div>
   );
 }
@@ -463,7 +601,11 @@ function FollowingTab({ username }: { username: string }) {
   if (rows.length === 0) return <EmptyList text="Not following anyone yet." />;
   return (
     <div className="card divide-y divide-[var(--hairline)] px-2 sm:px-3">
-      {rows.map((u) => <div key={u.username} className="px-2"><PersonRow {...u} /></div>)}
+      {rows.map((u) => (
+        <div key={u.username} className="px-2">
+          <PersonRow {...u} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -477,7 +619,11 @@ function FollowersTab({ username }: { username: string }) {
   if (rows.length === 0) return <EmptyList text="No followers yet." />;
   return (
     <div className="card divide-y divide-[var(--hairline)] px-2 sm:px-3">
-      {rows.map((u) => <div key={u.username} className="px-2"><PersonRow {...u} /></div>)}
+      {rows.map((u) => (
+        <div key={u.username} className="px-2">
+          <PersonRow {...u} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -485,8 +631,13 @@ function FollowersTab({ username }: { username: string }) {
 function PrivateNetworkState() {
   return (
     <div className="card flex flex-col items-center gap-2 p-10 text-center">
-      <div className="grid size-12 place-items-center rounded-2xl"
-        style={{ background: "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))" }}>
+      <div
+        className="grid size-12 place-items-center rounded-2xl"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))",
+        }}
+      >
         <Lock size={22} className="text-accent" />
       </div>
       <p className="text-[14px] font-medium">This isn&apos;t visible to you</p>
@@ -498,7 +649,11 @@ function PrivateNetworkState() {
 }
 
 function EmptyList({ text }: { text: string }) {
-  return <div className="card p-10 text-center text-[14px] text-ink-faint">{text}</div>;
+  return (
+    <div className="card p-10 text-center text-[14px] text-ink-faint">
+      {text}
+    </div>
+  );
 }
 function ListSkeleton() {
   return (

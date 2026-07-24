@@ -9,6 +9,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { useMyProfile, useUpdateProfile } from "@/hooks/use-settings";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { toast } from "@/components/ui/toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Form = {
   displayName: string;
@@ -20,7 +21,7 @@ type Form = {
 };
 
 export default function EditProfilePage() {
-  const { data } = useMyProfile();
+  const { data, refetch } = useMyProfile();
   const update = useUpdateProfile();
   const { upload, uploading } = useAvatarUpload();
   const router = useRouter();
@@ -41,6 +42,8 @@ export default function EditProfilePage() {
   const [form, setForm] = useState<Form>(blank);
   const [original, setOriginal] = useState<Form>(blank);
   const [saved, setSaved] = useState(false);
+
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (data) {
@@ -70,9 +73,14 @@ export default function EditProfilePage() {
   );
 
   const onAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await upload(file);
-  };
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const publicId = await upload(file);
+  if (publicId) {
+    toast.success("Profile photo updated");
+    await refetch();
+  }
+};
 
   const save = () => {
     const { anniversaryDate, ...rest } = form;

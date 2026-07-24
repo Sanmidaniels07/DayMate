@@ -28,16 +28,19 @@ export function useAvatarUpload() {
       fd.append('signature', sig.signature);
       fd.append('folder', sig.folder);
       fd.append('public_id', sig.public_id);
-      fd.append('overwrite', 'true'); 
+      fd.append('overwrite', 'true');
       if (sig.transformation) fd.append('transformation', sig.transformation);
 
       const cloudRes = await fetch(sig.uploadUrl, { method: 'POST', body: fd });
       if (!cloudRes.ok) throw new Error('Upload failed');
       const cloud = await cloudRes.json();
 
-      // 3. Confirm with our backend — it validates the public id is ours
+      // 3. Confirm with our backend — it validates the public id is ours,
+      // and we pass the Cloudinary version so re-uploads bust the CDN cache
+      // (the public_id is fixed via overwrite:true, so without a version
+      // stamp the delivery URL never changes and the old image stays cached).
       await api('/profiles/me/avatar/confirm', {
-        method: 'POST', body: JSON.stringify({ publicId: cloud.public_id }),
+        method: 'POST', body: JSON.stringify({ publicId: cloud.public_id, version: cloud.version }),
       });
       return cloud.public_id as string;
     } catch {

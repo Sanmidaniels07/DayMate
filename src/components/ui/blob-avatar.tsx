@@ -5,14 +5,19 @@ const TINTS: Record<string, string> = {
   lavender: 'var(--blob-lavender)', sage: 'var(--blob-sage)', peach: 'var(--blob-peach)',
 };
 
-/** Shared so anything tinting UI by a user's blob (banners, badges, etc.)
- *  doesn't redeclare the tint→token mapping. */
 export function getBlobTintVar(tint?: string | null) {
   return TINTS[tint ?? ''] ?? TINTS.powder;
 }
 
 const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD;
 const BLOB_PATH = 'M50 3 C74 3 97 20 97 48 C97 78 78 97 50 97 C22 97 3 79 3 49 C3 21 25 3 50 3 Z';
+
+
+export function buildCloudinarySrc(publicIdWithVersion: string, cloud: string, size: number) {
+  const [publicId, version] = publicIdWithVersion.split('?v=');
+  const versionSegment = version ? `v${version}/` : '';
+  return `https://res.cloudinary.com/${cloud}/image/upload/c_fill,g_face,w_${size * 2},h_${size * 2}/${versionSegment}${publicId}`;
+}
 
 interface Props {
   name: string;
@@ -24,11 +29,9 @@ interface Props {
 
 export function BlobAvatar({ name, tint, avatarUrl, size = 44, birthday }: Props) {
   const clipId = useId();
-  const fill = getBlobTintVar(tint); // ← was `TINTS[tint ?? ''] ?? 'var(--blob-powder)'`
+  const fill = getBlobTintVar(tint);
   const initials = name.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-  const src = avatarUrl && CLOUD
-    ? `https://res.cloudinary.com/${CLOUD}/image/upload/c_fill,g_face,w_${size * 2},h_${size * 2}/${avatarUrl}`
-    : null;
+  const src = avatarUrl && CLOUD ? buildCloudinarySrc(avatarUrl, CLOUD, size) : null;
 
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={name}>
