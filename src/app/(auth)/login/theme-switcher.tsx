@@ -1,6 +1,6 @@
 'use client';
 export function ThemeSwitcher() {
-  if (process.env.NODE_ENV === 'production') return null;
+  // if (process.env.NODE_ENV === 'production') return null;
   const set = (t: string) =>
     t ? document.documentElement.setAttribute('data-theme', t)
       : document.documentElement.removeAttribute('data-theme');
