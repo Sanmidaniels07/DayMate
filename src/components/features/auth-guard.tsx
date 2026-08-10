@@ -1,15 +1,20 @@
 'use client';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSessionStore } from '@/stores/session';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const status = useSessionStore((s) => s.status);
+  const hasProfile = useSessionStore((s) => s.user?.hasProfile);
 
   useEffect(() => {
     if (status === 'guest') router.replace('/login');
-  }, [status, router]);
+    if (status === 'authenticated' && hasProfile === false && pathname !== '/onboarding') {
+      router.replace('/onboarding');
+    }
+  }, [status, hasProfile, pathname, router]);
 
   if (status !== 'authenticated') {
     return (

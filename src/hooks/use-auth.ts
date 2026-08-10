@@ -8,7 +8,7 @@ interface LoginResponse {
   data: {
     accessToken: string;
     refreshToken?: string;
-    user: { id: string; fullName: string; email: string; role: string; username: string | null };
+    user: { id: string; fullName: string; email: string; role: string; username: string | null; hasProfile: boolean };
   };
 }
 

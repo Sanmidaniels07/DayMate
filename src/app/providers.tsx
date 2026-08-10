@@ -12,6 +12,7 @@ interface SessionBootUser {
   email: string;
   role: string;
   username: string | null;
+  hasProfile: boolean;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

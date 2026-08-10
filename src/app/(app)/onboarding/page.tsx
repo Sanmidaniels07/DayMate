@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, ArrowRight, SkipForward } from 'lucide-react';
@@ -26,6 +26,11 @@ export default function OnboardingPage() {
   const router = useRouter();
   const user = useSessionStore((s) => s.user);
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    if (user?.hasProfile) router.replace('/home');
+  }, [user?.hasProfile, router]);
+
 
   return (
     <div className="mx-auto flex flex-col justify-center gap-6 px-4 py-10">

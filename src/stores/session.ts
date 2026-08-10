@@ -7,6 +7,7 @@ interface SessionUser {
   email: string;
   role: string;
   username: string | null;
+  hasProfile: boolean;
 }
 
 interface SessionState {
@@ -38,7 +39,7 @@ export const useSessionStore = create<SessionState>()(
         set({ accessToken: null, refreshToken: null, user: null, status: "guest" }),
       setGuest: () => set({ status: "guest" }),
       setUsername: (username) =>
-        set((s) => (s.user ? { user: { ...s.user, username } } : s)),
+        set((s) => (s.user ? { user: { ...s.user, username, hasProfile: true } } : s)),
     }),
     {
       name: "bday-auth",
