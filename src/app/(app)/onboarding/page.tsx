@@ -134,7 +134,7 @@ function StepUsername({ onNext, defaultName }: { onNext: () => void; defaultName
   return (
     <StepShell eyebrow="Step 1 of 4" title="Claim your name" subtitle="This is how people find you.">
       <div className="flex flex-col gap-4">
-        <Input readOnly label="Display name" value={displayName}
+        <Input label="Display name" value={displayName}
           onChange={(e) => setDisplayName(e.target.value)} maxLength={40} />
         <div>
           <Input label="Username" value={username}
