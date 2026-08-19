@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { PresenceAvatar } from "@/components/ui/presence-avatar";
-import { BlobAvatar, buildCloudinarySrc, getBlobTintVar } from "@/components/ui/blob-avatar";
+import {
+  BlobAvatar,
+  buildCloudinarySrc,
+  getBlobTintVar,
+} from "@/components/ui/blob-avatar";
 import { Button } from "@/components/ui/button";
 import { RelationshipButton } from "@/components/features/relationship-button";
 import { ReportModal } from "@/components/features/report-modal";
@@ -180,7 +184,7 @@ export default function ProfilePage({
       </button>
 
       {/* ---- Identity card ---- */}
-      <div className="card overflow-hidden !p-0">
+      <div className="card !p-0">
         <div className="relative h-56 w-full overflow-hidden sm:h-64">
           {hasCover ? (
             <img
@@ -373,7 +377,8 @@ export default function ProfilePage({
                           className="fixed inset-0 z-10"
                           onClick={() => setMenuOpen(false)}
                         />
-                        <div className="absolute right-0 top-11 z-20 w-44 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-float)]">
+                        <div className="absolute left-0 top-full z-20 mt-1.5 w-44 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-float)]">
+                          {" "}
                           <button
                             onClick={() => {
                               setMenuOpen(false);
