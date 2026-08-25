@@ -1,6 +1,7 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useSessionStore } from '@/stores/session';
 
 export interface Profile {
   username: string;
@@ -55,5 +56,33 @@ export function useUpdateProfile() {
     mutationFn: (body: Record<string, unknown>) =>
       api('/profiles/me', { method: 'PATCH', body: JSON.stringify(body) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me-profile'] }),
+  });
+}
+
+export function useSetOnboardingStep() {
+  return useMutation({
+    mutationFn: (step: number) =>
+      api<{ data: { onboardingStep: number; onboardingComplete: boolean } }>(
+        '/profiles/me/onboarding-step',
+        { method: 'PATCH', body: JSON.stringify({ step }) },
+      ),
+    onSuccess: (res) => {
+      useSessionStore.getState().setOnboardingStep(res.data.onboardingStep);
+    },
+  });
+}
+
+export function useCompleteOnboarding() {
+  return useMutation({
+    mutationFn: () =>
+      api<{ data: { onboardingComplete: boolean; onboardingStep: number } }>(
+        '/profiles/me/complete-onboarding',
+        { method: 'POST' },
+      ),
+    onSuccess: (res) => {
+      const store = useSessionStore.getState();
+      store.setOnboardingComplete(true);
+      store.setOnboardingStep(res.data.onboardingStep ?? 5);
+    },
   });
 }

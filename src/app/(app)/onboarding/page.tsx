@@ -1,36 +1,54 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, ArrowRight, SkipForward } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { BlobAvatar } from '@/components/ui/blob-avatar';
-import { useSessionStore } from '@/stores/session';
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, ArrowRight, SkipForward } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { BlobAvatar } from "@/components/ui/blob-avatar";
+import { useSessionStore } from "@/stores/session";
 import {
-  useUsernameAvailable, useSetupProfile, useInterests, useSetInterests, useUpdateProfile,
-} from '@/hooks/use-profile';
-import { useDebounced } from '@/hooks/use-debounced';
-import { useAvatarUpload } from '@/hooks/use-avatar-upload';
-import { ApiError } from '@/lib/api';
+  useUsernameAvailable,
+  useSetupProfile,
+  useInterests,
+  useSetInterests,
+  useUpdateProfile,
+  useCompleteOnboarding,
+  useSetOnboardingStep,
+} from "@/hooks/use-profile";
+import { useDebounced } from "@/hooks/use-debounced";
+import { useAvatarUpload } from "@/hooks/use-avatar-upload";
+import { ApiError } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
 
-const STEPS = ['Name', 'Interests', 'Anniversary', 'Photo'];
+const STEPS = ["Name", "Interests", "Anniversary", "Photo"];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
+  },
   exit: { opacity: 0, y: -10, transition: { duration: 0.25 } },
 };
 
 export default function OnboardingPage() {
   const router = useRouter();
   const user = useSessionStore((s) => s.user);
-  const [step, setStep] = useState(1);
+  const initialStep = Math.min(Math.max(user?.onboardingStep ?? 1, 1), 4);
+  const [step, setStep] = useState(initialStep);
 
   useEffect(() => {
-    if (user?.hasProfile) router.replace('/home');
-  }, [user?.hasProfile, router]);
+    if (user?.onboardingComplete) {
+      router.replace("/home");
+    }
+  }, [user?.onboardingComplete, router]);
 
+  useEffect(() => {
+    const serverStep = Math.min(Math.max(user?.onboardingStep ?? 1, 1), 4);
+    setStep((s) => Math.max(s, serverStep));
+  }, [user?.onboardingStep]);
 
   return (
     <div className="mx-auto flex flex-col justify-center gap-6 px-4 py-10">
@@ -40,18 +58,29 @@ export default function OnboardingPage() {
           const n = i + 1;
           const filled = n <= step;
           return (
-            <div key={label} className="flex flex-1 flex-col items-center gap-1.5">
+            <div
+              key={label}
+              className="flex flex-1 flex-col items-center gap-1.5"
+            >
               <motion.span
                 className="h-1.5 w-full rounded-full bg-black/10"
-                style={filled ? {
-                  background: 'linear-gradient(135deg, var(--accent), var(--charcoal))',
-                  opacity: n < step ? 0.5 : 1,
-                } : undefined}
-                layout transition={{ duration: 0.3 }}
+                style={
+                  filled
+                    ? {
+                        background:
+                          "linear-gradient(135deg, var(--accent), var(--charcoal))",
+                        opacity: n < step ? 0.5 : 1,
+                      }
+                    : undefined
+                }
+                layout
+                transition={{ duration: 0.3 }}
               />
-              <span className={`text-[10px] font-medium uppercase tracking-wide ${
-                n === step ? 'text-accent' : 'text-ink-faint'
-              }`}>
+              <span
+                className={`text-[10px] font-medium uppercase tracking-wide ${
+                  n === step ? "text-accent" : "text-ink-faint"
+                }`}
+              >
                 {label}
               </span>
             </div>
@@ -61,23 +90,53 @@ export default function OnboardingPage() {
 
       <AnimatePresence mode="wait">
         {step === 1 && (
-          <motion.div key="s1" variants={fadeUp} initial="hidden" animate="show" exit="exit">
-            <StepUsername onNext={() => setStep(2)} defaultName={user?.fullName ?? ''} />
+          <motion.div
+            key="s1"
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
+            <StepUsername
+              onNext={() => setStep(2)}
+              defaultName={user?.fullName ?? ""}
+            />
           </motion.div>
         )}
         {step === 2 && (
-          <motion.div key="s2" variants={fadeUp} initial="hidden" animate="show" exit="exit">
+          <motion.div
+            key="s2"
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
             <StepInterests onNext={() => setStep(3)} />
           </motion.div>
         )}
         {step === 3 && (
-          <motion.div key="s3" variants={fadeUp} initial="hidden" animate="show" exit="exit">
+          <motion.div
+            key="s3"
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
             <StepAnniversary onNext={() => setStep(4)} />
           </motion.div>
         )}
         {step === 4 && (
-          <motion.div key="s4" variants={fadeUp} initial="hidden" animate="show" exit="exit">
-            <StepAvatar onDone={() => router.replace('/home')} name={user?.fullName ?? ''} />
+          <motion.div
+            key="s4"
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
+            <StepAvatar
+              onDone={() => router.replace("/home")}
+              name={user?.fullName ?? ""}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -86,19 +145,31 @@ export default function OnboardingPage() {
 }
 
 function StepShell({
-  eyebrow, title, subtitle, children,
-}: { eyebrow: string; title: string; subtitle: string; children: React.ReactNode }) {
+  eyebrow,
+  title,
+  subtitle,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="card relative overflow-hidden p-8">
       <motion.div
         className="absolute -right-10 -top-10 size-40 rounded-full opacity-40 blur-2xl"
-        style={{ background: 'var(--celebrate)' }}
+        style={{ background: "var(--celebrate)" }}
         animate={{ opacity: [0.25, 0.4, 0.25], scale: [1, 1.1, 1] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
       />
       <div className="relative">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">{eyebrow}</p>
-        <h1 className="mt-1 font-display text-[26px] font-semibold leading-tight tracking-[-0.01em]">{title}</h1>
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
+          {eyebrow}
+        </p>
+        <h1 className="mt-1 font-display text-[26px] font-semibold leading-tight tracking-[-0.01em]">
+          {title}
+        </h1>
         <p className="mt-1.5 text-[14px] text-ink-soft">{subtitle}</p>
         <div className="mt-7">{children}</div>
       </div>
@@ -106,8 +177,14 @@ function StepShell({
   );
 }
 
-function StepUsername({ onNext, defaultName }: { onNext: () => void; defaultName: string }) {
-  const [username, setUsername] = useState('');
+function StepUsername({
+  onNext,
+  defaultName,
+}: {
+  onNext: () => void;
+  defaultName: string;
+}) {
+  const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState(defaultName);
   const debounced = useDebounced(username);
   const availability = useUsernameAvailable(debounced);
@@ -115,13 +192,17 @@ function StepUsername({ onNext, defaultName }: { onNext: () => void; defaultName
 
   const clean = /^[a-z0-9_]{3,20}$/.test(debounced);
   const available = clean && availability.data?.data.available;
-  const status =
-    !username ? null
-    : !/^[a-z0-9_]*$/.test(username) ? { msg: 'Lowercase letters, numbers, underscore only', ok: false }
-    : username.length < 3 ? { msg: 'At least 3 characters', ok: false }
-    : availability.isFetching ? { msg: 'Checking…', ok: null }
-    : available ? { msg: `@${username} is available`, ok: true }
-    : { msg: 'Taken — try another', ok: false };
+  const status = !username
+    ? null
+    : !/^[a-z0-9_]*$/.test(username)
+      ? { msg: "Lowercase letters, numbers, underscore only", ok: false }
+      : username.length < 3
+        ? { msg: "At least 3 characters", ok: false }
+        : availability.isFetching
+          ? { msg: "Checking…", ok: null }
+          : available
+            ? { msg: `@${username} is available`, ok: true }
+            : { msg: "Taken — try another", ok: false };
 
   const submit = () => {
     setup.mutate(
@@ -129,31 +210,66 @@ function StepUsername({ onNext, defaultName }: { onNext: () => void; defaultName
       {
         onSuccess: (res) => {
           useSessionStore.getState().setUsername(res.data.username);
+          useSessionStore.getState().setOnboardingStep(2);
+          toast.success("Name claimed");
           onNext();
         },
-        onError: (e) => { if (e instanceof ApiError && e.status === 409) setUsername(''); },
+        onError: (e) => {
+          if (e instanceof ApiError && e.status === 409) {
+            setUsername("");
+            toast.error("That username was just taken — try another");
+            return;
+          }
+          const message =
+            e instanceof ApiError ? e.message : "Couldn’t save your name";
+          toast.error(message);
+        },
       },
     );
   };
-  
+
   return (
-    <StepShell eyebrow="Step 1 of 4" title="Claim your name" subtitle="This is how people find you.">
+    <StepShell
+      eyebrow="Step 1 of 4"
+      title="Claim your name"
+      subtitle="This is how people find you."
+    >
       <div className="flex flex-col gap-4">
-        <Input label="Display name" value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)} maxLength={40} />
+        <Input
+          label="Display name"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          maxLength={40}
+        />
         <div>
-          <Input label="Username" value={username}
+          <Input
+            label="Username"
+            value={username}
             onChange={(e) => setUsername(e.target.value.toLowerCase())}
-            maxLength={20} placeholder="maya_s"
-            className={status?.ok === true ? 'border-[var(--success)]' : ''} />
+            maxLength={20}
+            placeholder="maya_s"
+            className={status?.ok === true ? "border-[var(--success)]" : ""}
+          />
           {status && (
-            <p className={`mt-1.5 text-[13px] ${
-              status.ok === true ? 'text-[var(--success)]' : status.ok === false ? 'text-danger' : 'text-ink-faint'
-            }`}>{status.msg}</p>
+            <p
+              className={`mt-1.5 text-[13px] ${
+                status.ok === true
+                  ? "text-[var(--success)]"
+                  : status.ok === false
+                    ? "text-danger"
+                    : "text-ink-faint"
+              }`}
+            >
+              {status.msg}
+            </p>
           )}
         </div>
-        <Button className="mt-2 w-full" disabled={!available || !displayName.trim()}
-          loading={setup.isPending} onClick={submit}>
+        <Button
+          className="mt-2 w-full"
+          disabled={!available || !displayName.trim()}
+          loading={setup.isPending}
+          onClick={submit}
+        >
           Continue <ArrowRight size={16} />
         </Button>
       </div>
@@ -165,46 +281,101 @@ function StepInterests({ onNext }: { onNext: () => void }) {
   const { data } = useInterests();
   const setInterests = useSetInterests();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const toggle = (id: string) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+  const toggle = (id: string) => {
+  setSelected((s) => {
+    const next = new Set(s);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+};
+
+  const submit = () => {
+    setInterests.mutate([...selected], {
+      onSuccess: () => {
+        useSessionStore.getState().setOnboardingStep(3);
+        toast.success("Interests saved");
+        onNext();
+      },
+      onError: (e) => {
+        const message =
+          e instanceof ApiError ? e.message : "Couldn’t save interests";
+        toast.error(message);
+      },
     });
+  };
 
   return (
-    <StepShell eyebrow="Step 2 of 4" title="What are you into?" subtitle="Pick a few — we'll find your people.">
+    <StepShell
+      eyebrow="Step 2 of 4"
+      title="What are you into?"
+      subtitle="Pick a few — we'll find your people."
+    >
       <div className="flex flex-wrap gap-2">
         {data?.data.map((it) => {
           const on = selected.has(it.id);
           return (
-            <motion.button key={it.id} onClick={() => toggle(it.id)}
+            <motion.button
+              key={it.id}
+              onClick={() => toggle(it.id)}
               whileTap={{ scale: 0.94 }}
               className={`rounded-[var(--radius-pill)] border px-4 py-2 text-[14px] transition-colors ${
-                on ? 'border-transparent bg-accent text-[var(--ink-on-dark)] shadow-sm'
-                   : 'border-[var(--hairline)] bg-[var(--surface-raised)] text-ink-soft'
-              }`}>
+                on
+                  ? "border-transparent bg-accent text-[var(--ink-on-dark)] shadow-sm"
+                  : "border-[var(--hairline)] bg-[var(--surface-raised)] text-ink-soft"
+              }`}
+            >
               {it.name}
             </motion.button>
           );
         })}
       </div>
-      <Button className="mt-8 w-full" loading={setInterests.isPending}
+      <Button
+        className="mt-8 w-full"
+        loading={setInterests.isPending}
         disabled={selected.size === 0}
-        onClick={() => setInterests.mutate([...selected], { onSuccess: onNext })}>
-        Continue{selected.size > 0 ? ` (${selected.size})` : ''} <ArrowRight size={16} />
+        onClick={submit}
+      >
+        Continue{selected.size > 0 ? ` (${selected.size})` : ""}{" "}
+        <ArrowRight size={16} />
       </Button>
     </StepShell>
   );
 }
 
 function StepAnniversary({ onNext }: { onNext: () => void }) {
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState("");
   const update = useUpdateProfile();
+  const setStepProgress = useSetOnboardingStep();
+
+  const goNext = (skipped: boolean) => {
+    setStepProgress.mutate(4, {
+      onSuccess: () => {
+        toast.success(skipped ? "Skipped for now" : "Anniversary saved");
+        onNext();
+      },
+      onError: () => {
+        toast.error("Couldn’t update progress — continuing anyway");
+        onNext();
+      },
+    });
+  };
 
   const submit = () => {
-    if (!date) { onNext(); return; }
-    update.mutate({ anniversaryDate: date }, { onSuccess: onNext, onError: onNext });
+    if (!date) {
+      goNext(true);
+      return;
+    }
+    update.mutate(
+      { anniversaryDate: date },
+      {
+        onSuccess: () => goNext(false),
+        onError: (e) => {
+          const message =
+            e instanceof ApiError ? e.message : "Couldn’t save anniversary";
+          toast.error(message);
+        },
+      },
+    );
   };
 
   return (
@@ -217,17 +388,28 @@ function StepAnniversary({ onNext }: { onNext: () => void }) {
         <div className="flex items-center gap-3 rounded-2xl bg-[var(--celebrate-soft)] px-4 py-3">
           <Heart size={18} className="shrink-0 text-[#8a6410]" />
           <p className="text-[13px] leading-snug text-[#6b4e0c]">
-            We only use the month and day — never the year. You can add or remove this anytime.
+            We only use the month and day — never the year. You can add or
+            remove this anytime.
           </p>
         </div>
-        <Input label="Wedding anniversary" type="date" value={date}
-          onChange={(e) => setDate(e.target.value)} />
+        <Input
+          label="Wedding anniversary"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
         <div className="mt-2 flex gap-2">
-          <button onClick={onNext}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--hairline)] py-3 text-[14px] font-medium text-ink-soft transition-colors hover:bg-black/[0.03]">
+          <button
+            onClick={onNext}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--hairline)] py-3 text-[14px] font-medium text-ink-soft transition-colors hover:bg-black/[0.03]"
+          >
             <SkipForward size={15} /> Skip
           </button>
-          <Button className="flex-[1.4]" loading={update.isPending} onClick={submit}>
+          <Button
+            className="flex-[1.4]"
+            loading={update.isPending || setStepProgress.isPending}
+            onClick={submit}
+          >
             Continue <ArrowRight size={16} />
           </Button>
         </div>
@@ -238,6 +420,7 @@ function StepAnniversary({ onNext }: { onNext: () => void }) {
 
 function StepAvatar({ onDone, name }: { onDone: () => void; name: string }) {
   const { upload, uploading, error } = useAvatarUpload();
+  const complete = useCompleteOnboarding();
   const [publicId, setPublicId] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -249,12 +432,35 @@ function StepAvatar({ onDone, name }: { onDone: () => void; name: string }) {
     if (id) setPublicId(id);
   };
 
+  const finish = () => {
+    complete.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("You’re all set — welcome to DayMate");
+        onDone();
+      },
+      onError: (e) => {
+        const message =
+          e instanceof ApiError ? e.message : "Couldn’t finish onboarding";
+        toast.error(message);
+        onDone();
+      },
+    });
+  };
+
   return (
-    <StepShell eyebrow="Step 4 of 4" title="Add a face" subtitle="Optional — but it helps people recognize you.">
+    <StepShell
+      eyebrow="Step 4 of 4"
+      title="Add a face"
+      subtitle="Optional — but it helps people recognize you."
+    >
       <div className="flex flex-col items-center text-center">
         <div className="relative">
           {preview ? (
-            <img src={preview} alt="" className="size-28 rounded-full object-cover shadow-[var(--shadow-float)]" />
+            <img
+              src={preview}
+              alt=""
+              className="size-28 rounded-full object-cover shadow-[var(--shadow-float)]"
+            />
           ) : (
             <BlobAvatar name={name} size={112} />
           )}
@@ -265,12 +471,21 @@ function StepAvatar({ onDone, name }: { onDone: () => void; name: string }) {
           )}
         </div>
         <label className="mt-6 cursor-pointer text-[14px] font-semibold text-accent">
-          {publicId ? 'Change photo' : 'Choose photo'}
-          <input type="file" accept="image/*" className="hidden" onChange={onFile} />
+          {publicId ? "Change photo" : "Choose photo"}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onFile}
+          />
         </label>
         {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
-        <Button className="mt-8 w-full" onClick={onDone}>
-          {publicId ? 'Finish' : 'Skip for now'}
+        <Button
+          className="mt-8 w-full"
+          loading={complete.isPending}
+          onClick={finish}
+        >
+          {publicId ? "Finish" : "Skip for now"}
         </Button>
       </div>
     </StepShell>

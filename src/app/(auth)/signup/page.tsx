@@ -10,6 +10,7 @@ import { ApiError } from '@/lib/api';
 import { Select } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { SignupHero } from '@/components/features/sign-up-hero';
+import { toast } from '@/components/ui/toast';
 
 const HERO_POINTS = [
   { icon: Cake, text: 'Meet people who share your exact birthday', gradient: 'linear-gradient(135deg, var(--blob-blush), var(--celebrate))' },
@@ -54,7 +55,17 @@ export default function SignupPage() {
     const { phone, ...rest } = form;
     signup.mutate(
       { ...rest, ...(phone.trim() ? { phone: phone.trim() } : {}) },
-      { onSuccess: () => router.push(`/verify?email=${encodeURIComponent(form.email)}`) },
+      {
+        onSuccess: () => {
+          toast.success('Account created — check your email for a code');
+          router.push(`/verify?email=${encodeURIComponent(form.email)}`);
+        },
+        onError: (err) => {
+          const message =
+            err instanceof ApiError ? err.message : 'Signup failed. Try again.';
+          toast.error(message);
+        },
+      },
     );
   };
   const errorMsg = signup.error instanceof ApiError ? signup.error.message : null;

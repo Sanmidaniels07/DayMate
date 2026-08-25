@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useVerifyEmail, useResendOtp } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api';
+import { toast } from '@/components/ui/toast'; 
 
 const RESEND_WAIT_S = 60;
 
@@ -25,13 +26,38 @@ function VerifyInner() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    verify.mutate({ email, code }, { onSuccess: () => router.replace('/login?verified=1') });
+    verify.mutate(
+      { email, code },
+      {
+        onSuccess: () => {
+          toast.success('Email verified successfully! You can now log in.'); 
+          router.replace('/login?verified=1');
+        },
+        onError: (error) => {
+          if (error instanceof ApiError) {
+            toast.error(error.message || 'Verification failed. Please try again.'); 
+          } else {
+            toast.error('An unexpected error occurred. Please try again.'); 
+          }
+        },
+      }
+    );
   };
 
   const doResend = () => {
     if (cooldown > 0 || resend.isPending || !email) return;
     resend.mutate(email, {
-      onSettled: () => setCooldown(RESEND_WAIT_S), 
+      onSuccess: () => {
+        toast.info('A fresh code has been sent to your email.'); 
+      },
+      onError: (error) => {
+        if (error instanceof ApiError) {
+          toast.error(error.message || 'Failed to resend code. Please try again.');
+        } else {
+          toast.error('Failed to resend code. Please try again.');
+        }
+      },
+      onSettled: () => setCooldown(RESEND_WAIT_S),
     });
   };
 

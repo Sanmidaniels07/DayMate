@@ -13,6 +13,8 @@ interface SessionBootUser {
   role: string;
   username: string | null;
   hasProfile: boolean;
+  onboardingComplete: boolean;  
+  onboardingStep: number;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

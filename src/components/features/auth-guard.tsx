@@ -7,14 +7,27 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const status = useSessionStore((s) => s.status);
-  const hasProfile = useSessionStore((s) => s.user?.hasProfile);
+  const onboardingComplete = useSessionStore((s) => s.user?.onboardingComplete);
 
   useEffect(() => {
-    if (status === 'guest') router.replace('/login');
-    if (status === 'authenticated' && hasProfile === false && pathname !== '/onboarding') {
-      router.replace('/onboarding');
+    if (status === 'guest') {
+      router.replace('/login');
+      return;
     }
-  }, [status, hasProfile, pathname, router]);
+
+    if (status === 'authenticated') {
+      // Not finished onboarding → must be on /onboarding
+      if (onboardingComplete === false && pathname !== '/onboarding') {
+        router.replace('/onboarding');
+        return;
+      }
+
+      // Already finished → keep them out of /onboarding
+      if (onboardingComplete === true && pathname === '/onboarding') {
+        router.replace('/home');
+      }
+    }
+  }, [status, onboardingComplete, pathname, router]);
 
   if (status !== 'authenticated') {
     return (
@@ -23,5 +36,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       </main>
     );
   }
+
   return <>{children}</>;
 }
