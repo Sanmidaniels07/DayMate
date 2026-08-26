@@ -31,7 +31,11 @@ export function useProfile(username: string) {
 
 function useSocialAction(username: string) {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: ['profile', username] });
+  return () => {
+    qc.invalidateQueries({ queryKey: ['profile', username] });
+    qc.invalidateQueries({ queryKey: ['friends'] });
+    qc.invalidateQueries({ queryKey: ['requests'] });
+  };
 }
 
 export function useSendRequest(username: string) {
