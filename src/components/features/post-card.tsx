@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { BlobAvatar } from "@/components/ui/blob-avatar";
@@ -8,6 +8,8 @@ import {
   useToggleReaction,
   useEditPost,
   useDeletePost,
+  useToggleRepost,
+  useUndoRepost,
   type PostCard as Post,
 } from "@/hooks/use-feed";
 import {
@@ -17,13 +19,13 @@ import {
   MoreHorizontal,
   Check,
   X as XIcon,
+  Repeat2,
 } from "lucide-react";
 import { ReportModal } from "@/components/features/report-modal";
 import { ReactionsDetail } from "@/components/features/reactions-detail";
 import { useSessionStore } from "@/stores/session";
 import { toast } from "@/components/ui/toast";
 import dynamic from "next/dynamic";
-import { useRef } from "react";
 import { PostActionsMenu } from "./post-action-menu";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
@@ -36,7 +38,12 @@ const img = (id: string, w = 800) =>
 
 export function PostCard({ post }: { post: Post }) {
   const [showPicker, setShowPicker] = useState(false);
+  const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+
   const react = useToggleReaction();
+  const repost = useToggleRepost();
+  const undoRepost = useUndoRepost();
+
   const p = post.author.profile;
   const [reporting, setReporting] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
@@ -74,6 +81,22 @@ export function PostCard({ post }: { post: Post }) {
     deletePost.mutate(post.id, {
       onSuccess: () => toast.success("Post deleted"),
       onError: () => toast.error("Could not delete post"),
+    });
+  };
+
+  const doRepost = () => {
+    setRepostMenuOpen(false);
+    repost.mutate(post.id, {
+      onSuccess: () => toast.success("Reposted"),
+      onError: () => toast.error("Could not repost"),
+    });
+  };
+
+  const doUndoRepost = () => {
+    setRepostMenuOpen(false);
+    undoRepost.mutate(post.id, {
+      onSuccess: () => toast.success("Repost removed"),
+      onError: () => toast.error("Could not undo repost"),
     });
   };
 
@@ -212,6 +235,53 @@ export function PostCard({ post }: { post: Post }) {
           )}
         </div>
 
+        <div className="relative">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setRepostMenuOpen((v) => !v)}
+            disabled={repost.isPending || undoRepost.isPending}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-[14px] transition-colors ${
+              post.repostedByMe
+                ? "text-[var(--success)]"
+                : "text-ink-soft hover:bg-[var(--accent-soft)] hover:text-accent"
+            }`}
+            aria-label={post.repostedByMe ? "Undo repost" : "Repost"}
+          >
+            <Repeat2
+              size={18}
+              className={post.repostedByMe ? "fill-[var(--success)]/15" : ""}
+            />
+            {post._count.reposts > 0 && post._count.reposts}
+          </motion.button>
+
+          {repostMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setRepostMenuOpen(false)}
+              />
+              <div className="absolute bottom-11 left-0 z-20 w-48 max-w-[85vw] overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--shadow-float)]">
+                {post.repostedByMe ? (
+                  <button
+                    onClick={doUndoRepost}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[14px] font-medium text-[var(--success)] hover:bg-[var(--accent-soft)]"
+                  >
+                    <Repeat2 size={16} className="fill-[var(--success)]/15" />
+                    Undo repost
+                  </button>
+                ) : (
+                  <button
+                    onClick={doRepost}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[14px] font-medium text-ink hover:bg-[var(--accent-soft)]"
+                  >
+                    <Repeat2 size={16} />
+                    Repost
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
         {post._count.reactions > 0 && (
           <button
             onClick={() => setShowReactions((v) => !v)}

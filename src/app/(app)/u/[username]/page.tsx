@@ -20,7 +20,7 @@ import {
   useFollowing,
 } from "@/hooks/use-social";
 import { usePresence } from "@/hooks/use-presence";
-import { useAuthorFeed } from "@/hooks/use-feed";
+import { useAuthorFeed, useAuthorReposts } from "@/hooks/use-feed";
 import { useCoverUpload } from "@/hooks/use-cover-upload";
 import { PostCard } from "@/components/features/post-card";
 import { PersonRow } from "@/components/features/person-row";
@@ -143,17 +143,17 @@ export default function ProfilePage({
   const stats = [
     {
       label: "Friends",
-      value: (p as any).friendCount ?? 0,
+      value: p.friendCount ?? 0,
       color: "linear-gradient(135deg, var(--blob-peach), #E8703D)",
     },
     {
       label: "Circles",
-      value: (p as any).communityCount ?? 0,
+      value: p.communityCount ?? 0,
       color: "linear-gradient(135deg, var(--blob-lavender), #7C6FE0)",
     },
     {
       label: "Posts",
-      value: (p as any).postCount ?? 0,
+      value: p.postCount ?? 0,
       color: "linear-gradient(135deg, var(--charcoal), var(--accent))",
     },
   ];
@@ -483,7 +483,7 @@ export default function ProfilePage({
           {tab === "posts" && (
             <PostsTab username={username} isOwner={p.isOwner} />
           )}
-          {tab === "reposts" && <RepostsTab />}
+          {tab === "reposts" && <RepostsTab username={username} />}{" "}
           {tab === "following" && <FollowingTab username={username} />}
           {tab === "followers" && <FollowersTab username={username} />}
         </motion.div>
@@ -577,22 +577,41 @@ function PostsTab({
   );
 }
 
-function RepostsTab() {
+function RepostsTab({ username }: { username: string }) {
+  const timeline = useAuthorReposts(username);
+  const posts = timeline.data?.pages.flatMap((pg) => pg.data) ?? [];
+
   return (
-    <div className="card flex flex-col items-center gap-2 p-10 text-center">
-      <div
-        className="grid size-12 place-items-center rounded-2xl"
-        style={{
-          background:
-            "linear-gradient(135deg, var(--blob-lavender), var(--accent-soft))",
-        }}
-      >
-        <Repeat2 size={22} className="text-accent" />
-      </div>
-      <p className="text-[14px] font-medium">Reposts coming soon</p>
-      <p className="max-w-xs text-[13px] text-ink-soft">
-        This is where shared posts will show up.
-      </p>
+    <div className="flex flex-col gap-3">
+      {timeline.isLoading ? (
+        <div
+          className="flex flex-col gap-3"
+          aria-label="Loading reposts"
+          aria-busy="true"
+        >
+          <PostCardSkeleton />
+          <PostCardSkeleton />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="card p-10 text-center text-[14px] text-ink-faint">
+          No reposts yet.
+        </div>
+      ) : (
+        <>
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+          {timeline.hasNextPage && (
+            <button
+              onClick={() => timeline.fetchNextPage()}
+              disabled={timeline.isFetchingNextPage}
+              className="card-interactive card mx-auto px-5 py-2.5 text-[13px] font-medium text-ink-soft transition-opacity disabled:opacity-60"
+            >
+              {timeline.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

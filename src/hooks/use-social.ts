@@ -19,6 +19,9 @@ export interface ProfileView {
     isFollowing: boolean;
     pendingRequest: { requestId: string; direction: 'incoming' | 'outgoing' } | null;
   } | null;
+  friendCount: number;
+  communityCount: number;
+  postCount: number;
 }
 
 export function useProfile(username: string) {

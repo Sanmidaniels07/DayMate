@@ -9,7 +9,9 @@ export interface PostCard {
   createdAt: string;
   author: { profile: { username: string; displayName: string; avatarUrl: string | null; blobTint: string | null } | null };
   media: { url: string; type: string; width: number | null; height: number | null }[];
-  _count: { comments: number; reactions: number };
+  repostedByMe?: boolean;
+  _count: { comments: number; reactions: number; reposts: number };
+  reposts: number;
 }
 
 interface FeedPage {
@@ -171,3 +173,44 @@ export function useEditPost() {
   });
 }
 
+export function useToggleRepost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) =>
+      api<{ data: { reposted: boolean } }>(`/feed/posts/${postId}/repost`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+      qc.invalidateQueries({ queryKey: ['reposts'] });
+      qc.invalidateQueries({ queryKey: ['post'] });
+    },
+  });
+}
+
+export function useAuthorReposts(username: string) {
+  return useInfiniteQuery({
+    queryKey: ['reposts', 'by', username],
+    queryFn: ({ pageParam }) =>
+      api<{ data: PostCard[]; meta: { cursor: string | null; hasMore: boolean } }>(
+        `/feed/by/${username}/reposts?limit=15${pageParam ? `&cursor=${pageParam}` : ''}`,
+      ),
+    initialPageParam: '' as string,
+    getNextPageParam: (last) => (last.meta.hasMore ? last.meta.cursor : undefined),
+    enabled: !!username,
+  });
+}
+
+export function useUndoRepost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) =>
+      api<{ data: { reposted: boolean } }>(`/feed/posts/${postId}/repost`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+      qc.invalidateQueries({ queryKey: ['reposts'] });
+    },
+  });
+}
