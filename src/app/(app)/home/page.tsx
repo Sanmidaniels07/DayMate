@@ -13,9 +13,9 @@ import { useUnreadChats } from '@/hooks/use-chat';
 import { useUnreadCount } from '@/hooks/use-notifications';
 import { Composer } from '@/components/features/composer';
 import { BirthdaysToday } from '@/components/features/birthdays-today';
+import { Stories } from '@/components/features/stories';
 import { PostCard } from '@/components/features/post-card';
 import { fadeUp, stagger, CountUp } from '@/components/ui/motion';
-import { Stories } from '@/components/features/stories';
 
 export default function HomePage() {
   const router = useRouter();
@@ -49,8 +49,7 @@ export default function HomePage() {
   }, [feed.hasNextPage, feed.isFetchingNextPage, feed]);
 
   const posts = feed.data?.pages.flatMap((pg) => pg.data) ?? [];
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const firstName = user?.fullName?.split(' ')[0] ?? 'friend';
 
   const stats = [
     { label: 'Friends', value: friends.data?.data.length ?? 0, href: '/connections' },
@@ -65,70 +64,49 @@ export default function HomePage() {
   ];
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show"
-      className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
-      {/* ---- LEFT COLUMN: hero + feed ---- */}
-      <div className="flex flex-col gap-5">
-        <motion.header variants={fadeUp}
-          className="relative overflow-hidden rounded-[28px] p-7 text-white"
-          style={{ background: 'linear-gradient(150deg, var(--charcoal) 0%, #1F3A8F 100%)' }}>
-          <motion.div
-            className="absolute -right-10 -top-10 size-56 rounded-full blur-3xl"
-            style={{ background: 'var(--accent)' }}
-            animate={{ opacity: [0.25, 0.42, 0.25], scale: [1, 1.15, 1] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <motion.div
-            className="absolute -bottom-16 left-10 size-40 rounded-full blur-3xl"
-            style={{ background: 'var(--celebrate)' }}
-            animate={{ opacity: [0.08, 0.16, 0.08], scale: [1, 1.2, 1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          />
-          <div className="relative">
-            <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/50">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-            <h1 className="mt-3 font-display text-[clamp(2.5rem,2rem+2vw,3.75rem)] font-semibold leading-[1.02] tracking-[-0.02em]">
-              {greeting},<br /><span className="italic text-celebrate">{user?.fullName?.split(' ')[0] ?? 'friend'}</span>
-            </h1>
-            {alerts.data?.data.count ? (
-              <Link href="/notifications"
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[13px] font-medium backdrop-blur transition-colors hover:bg-white/20">
-                <Bell size={14} className="text-celebrate" />
-                {alerts.data.data.count} new
-                <ArrowRight size={14} />
-              </Link>
-            ) : null}
-          </div>
-        </motion.header>
-
-        <motion.div variants={fadeUp}>
-          <Stories />
-        </motion.div>
-
-        <motion.div variants={fadeUp}><Composer /></motion.div>
-        <div className="flex flex-col gap-4">
-          {feed.isLoading ? (
-            <div className="flex justify-center py-10">
-              <span className="size-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-            </div>
-          ) : posts.length === 0 ? (
-            <motion.div variants={fadeUp} className="card p-10 text-center text-ink-soft">
-              Quiet for now. Follow some people, or post the first thing.
-            </motion.div>
-          ) : (
-            posts.map((post) => (
-              <motion.div key={post.id} variants={fadeUp}>
-                <PostCard post={post} />
-              </motion.div>
-            ))
-          )}
+    <motion.div
+      variants={stagger} initial="hidden" animate="show"
+      className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start"
+    >
+      <motion.header
+        variants={fadeUp}
+        className="relative overflow-hidden rounded-[28px] p-7 text-white lg:col-start-1 lg:row-start-1"
+        style={{ background: 'linear-gradient(150deg, var(--charcoal) 0%, #1F3A8F 100%)' }}
+      >
+        <motion.div
+          className="absolute -right-10 -top-10 size-56 rounded-full blur-3xl"
+          style={{ background: 'var(--accent)' }}
+          animate={{ opacity: [0.25, 0.42, 0.25], scale: [1, 1.15, 1] }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute -bottom-16 left-10 size-40 rounded-full blur-3xl"
+          style={{ background: 'var(--celebrate)' }}
+          animate={{ opacity: [0.08, 0.16, 0.08], scale: [1, 1.2, 1] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
+        <div className="relative">
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/50">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="mt-3 font-display text-[clamp(2.5rem,2rem+2vw,3.75rem)] font-semibold leading-[1.02] tracking-[-0.02em]">
+            Hello,<br /><span className="italic text-celebrate">{firstName}</span>
+          </h1>
+          {alerts.data?.data.count ? (
+            <Link href="/notifications"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[13px] font-medium backdrop-blur transition-colors hover:bg-white/20">
+              <Bell size={14} className="text-celebrate" />
+              {alerts.data.data.count} new
+              <ArrowRight size={14} />
+            </Link>
+          ) : null}
         </div>
-        <div ref={sentinel} className="h-1" />
-      </div>
+      </motion.header>
 
-      {/* ---- RIGHT COLUMN ---- */}
-      <motion.aside variants={fadeUp} className="flex flex-col gap-4 lg:sticky lg:top-6">
+      <motion.aside
+        variants={fadeUp}
+        className="flex flex-col gap-4 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:row-span-2"
+      >
         <div className="grid grid-cols-3 gap-2">
           {stats.map((s) => (
             <Link key={s.label} href={s.href}
@@ -165,6 +143,30 @@ export default function HomePage() {
 
         <BirthdaysToday />
       </motion.aside>
+
+     
+      <div className="flex flex-col gap-5 lg:col-start-1 lg:row-start-2">
+        <motion.div variants={fadeUp}><Stories /></motion.div>
+        <motion.div variants={fadeUp}><Composer /></motion.div>
+        <div className="flex flex-col gap-4">
+          {feed.isLoading ? (
+            <div className="flex justify-center py-10">
+              <span className="size-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            </div>
+          ) : posts.length === 0 ? (
+            <motion.div variants={fadeUp} className="card p-10 text-center text-ink-soft">
+              Quiet for now. Follow some people, or post the first thing.
+            </motion.div>
+          ) : (
+            posts.map((post) => (
+              <motion.div key={post.id} variants={fadeUp}>
+                <PostCard post={post} />
+              </motion.div>
+            ))
+          )}
+        </div>
+        <div ref={sentinel} className="h-1" />
+      </div>
     </motion.div>
   );
 }
