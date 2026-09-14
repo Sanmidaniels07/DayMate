@@ -63,10 +63,10 @@ export default function LoginPage() {
             DayMate
           </p>
           <h1 className="mt-2 font-display text-[length:var(--text-title)] font-semibold">
-            Welcome back
+            Welcome,
           </h1>
           <p className="mt-1 text-[15px] text-ink-soft">
-            Your people are waiting.
+            Your birthday mates are waiting.
           </p>
 
           <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
