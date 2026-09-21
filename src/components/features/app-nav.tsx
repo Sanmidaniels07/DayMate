@@ -11,6 +11,7 @@ import { disconnectSocket } from '@/lib/socket';
 import { useSessionStore } from '@/stores/session';
 import { api } from '@/lib/api';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { Logo } from '../ui/logo';
 
 const ITEMS = [
   { href: '/home', label: 'Home', icon: Home },
@@ -62,7 +63,6 @@ export function AppNav() {
 
   return (
     <>
-      {/* ---------- Desktop rail (unchanged — stays visible in chat too) ---------- */}
       <nav className="fixed inset-y-0 left-0 z-40 hidden lg:block" aria-label="Primary">
         <div
           className="group/nav mx-3 my-3 flex h-[calc(100dvh-1.5rem)] w-20 flex-col items-stretch justify-start
@@ -70,9 +70,7 @@ export function AppNav() {
             transition-[width] duration-300 ease-out hover:w-56"
         >
           <Link href="/home" className="mb-2 flex shrink-0 items-center gap-3 self-stretch px-4">
-            <span className="flex size-8 shrink-0 items-center justify-center font-display text-xl font-bold text-celebrate">
-              D
-            </span>
+            <Logo size={32} className="shrink-0" />
             <span
               className="overflow-hidden whitespace-nowrap font-display text-lg font-semibold text-white/90
                 opacity-0 transition-opacity delay-75 duration-200 ease-out group-hover/nav:opacity-100"

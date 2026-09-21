@@ -9,6 +9,7 @@ import { useSessionStore } from '@/stores/session';
 import { disconnectSocket } from '@/lib/socket';
 import { api } from '@/lib/api';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { Logo } from '../ui/logo';
 
 const TAGLINES = [
   'find your birthday people',
@@ -69,8 +70,6 @@ function NavIconButton({
 }
 
 function NavTooltip({ show, label }: { show: boolean; label: string }) {
-  // Tooltips are a hover affordance — meaningless (and just extra DOM) on touch,
-  // so only render them on pointer devices, and only once actually hovered.
   return (
     <AnimatePresence>
       {show && (
@@ -115,34 +114,7 @@ export function TopNav() {
     <>
       <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-[var(--hairline)] bg-surface/85 px-3 py-2.5 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-8">
         <Link href="/home" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-          <span className="relative grid size-9 shrink-0 place-items-center rounded-2xl bg-charcoal sm:size-10">
-            <svg width="22" height="22" viewBox="0 0 44 44" fill="none" aria-hidden className="sm:h-[26px] sm:w-[26px]">
-              <motion.circle
-                cx="22" cy="22" r="20" fill="none" stroke="var(--celebrate)" strokeWidth="2.5"
-                strokeLinecap="round" strokeDasharray="126"
-                initial={{ strokeDashoffset: 126 }}
-                animate={{ strokeDashoffset: 0 }}
-                transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-              />
-              <motion.path
-                d="M15 13 H23 Q31 13 31 22 Q31 31 23 31 H15 Z" fill="none"
-                stroke="#F7F6F2" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"
-                strokeDasharray="70"
-                initial={{ strokeDashoffset: 70 }}
-                animate={{ strokeDashoffset: 0 }}
-                transition={{ duration: 0.9, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              />
-              <motion.circle
-                cx="22" cy="22" r="3" fill="var(--celebrate)"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1, r: [3, 4.5, 3] }}
-                transition={{
-                  opacity: { duration: 0.4, delay: 1.3 },
-                  r: { duration: 2.6, delay: 1.7, repeat: Infinity, ease: 'easeInOut' },
-                }}
-              />
-            </svg>
-          </span>
+          <Logo size={40} className="size-9 sm:size-10" />
 
           <span className="flex min-w-0 flex-col leading-none">
             <span className="font-display text-[17px] font-semibold tracking-[-0.02em] sm:text-[21px]">
