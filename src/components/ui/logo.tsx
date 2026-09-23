@@ -10,7 +10,7 @@ type LogoProps = {
 export function Logo({ size = 32, className = '' }: LogoProps) {
   return (
     <Image
-      src="/assets/daymate-mark.png"
+      src="/assets/day-mate-logo.png"
       alt="DayMate"
       width={size}
       height={size}
