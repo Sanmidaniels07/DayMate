@@ -3,13 +3,15 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CommunityCard } from '@/components/features/community-card';
 import { useMyCommunities, useBrowseCommunities } from '@/hooks/use-communities';
-import { Cake, CalendarDays, Users2, Compass, Sparkles } from 'lucide-react';
+import { Cake, CalendarDays, Users2, Compass, Sparkles, Heart } from 'lucide-react';
 
 const TYPES = [
   { key: '', label: 'All', icon: Sparkles, tint: 'var(--accent)' },
   { key: 'BIRTHDAY', label: 'Birthdays', icon: Cake, tint: 'var(--celebrate)' },
   { key: 'BIRTH_MONTH', label: 'Months', icon: CalendarDays, tint: 'var(--accent)' },
   { key: 'AGE_BRACKET', label: 'Eras', icon: Users2, tint: '#2FA36B' },
+  { key: 'ANNIVERSARY', label: 'Anniversaries', icon: Heart, tint: '#D9487B' },
+
 ] as const;
 
 export default function CommunitiesPage() {

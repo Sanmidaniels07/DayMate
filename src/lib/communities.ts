@@ -10,6 +10,8 @@ export function communityGlyph(c: Community): { emoji: string; sub: string } {
       return { emoji: '📅', sub: c.month ? `${MONTHS[c.month - 1]} babies` : 'Same month' };
     case 'AGE_BRACKET':
       return { emoji: '✨', sub: c.bracket ?? 'Same era' };
+    case 'ANNIVERSARY':
+      return { emoji: '💍', sub: c.month && c.day ? `${MONTHS[c.month - 1]} ${c.day}` : 'Anniversary twins' };
     default:
       return { emoji: '👥', sub: '' };
   }

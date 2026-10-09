@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 
 export interface Community {
   id: string;
-  type: 'BIRTHDAY' | 'BIRTH_MONTH' | 'AGE_BRACKET';
+  type: 'BIRTHDAY' | 'BIRTH_MONTH' | 'AGE_BRACKET' | 'ANNIVERSARY';
   name: string;
   month?: number | null;
   day?: number | null;
